@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="dashboard-container">
+    <h2>Panel de Resultados</h2>
+    <p>Promedio general: {{ '%.2f'|format(average_score) }}</p>
+    <table class="result-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha y hora</th>
+                <th>Estudiante</th>
+                <th>Caso</th>
+                <th>Puntaje</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in results %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.timestamp }}</td>
+                <td>{{ row.student_id }}</td>
+                <td>{{ cases[row.case_id].title }}</td>
+                <td>{{ '%.2f'|format(row.score) }}</td>
+                <td><a href="{{ url_for('view_result', result_id=row.id) }}">Ver</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+<p><a href="{{ url_for('logout') }}">Cerrar sesión</a></p>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="result-detail-container">
+    <h2>Detalle del Resultado #{{ result.id }}</h2>
+    <p><strong>Fecha y hora:</strong> {{ result.timestamp }}</p>
+    <p><strong>Estudiante:</strong> {{ result.student_id }}</p>
+    <p><strong>Caso:</strong> {{ case.title }}</p>
+    <p><strong>Puntaje total:</strong> {{ '%.2f'|format(result.score) }} / 100</p>
+    <h3>Respuestas</h3>
+    <ol>
+        {% for answer in answers %}
+        <li>
+            <p><strong>Pregunta {{ loop.index }}:</strong> {{ case.questions[loop.index0].text }}</p>
+            <p>Respuesta estudiante: <em>{{ 'Verdadero' if answer.user_bool else 'Falso' }}</em></p>
+            <p>Respuesta correcta: <em>{{ 'Verdadero' if answer.correct else 'Falso' }}</em></p>
+            <p>Justificación:</p>
+            <blockquote>{{ answer.user_reason }}</blockquote>
+            <ul class="breakdown">
+                <li>Veracidad: {{ '%.1f'|format(answer.breakdown.truth) }} pts</li>
+                <li>Argumentación: {{ '%.1f'|format(answer.breakdown.argument) }} pts</li>
+                <li>Penalización IA: {{ '%.1f'|format(answer.breakdown.ai_penalty) }} pts</li>
+                <li>Puntuación total: {{ '%.2f'|format(answer.score) }} pts</li>
+            </ul>
+        </li>
+        {% endfor %}
+    </ol>
+    <h3>Eventos de registro</h3>
+    {% if events %}
+    <table class="event-table">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Tipo</th>
+                <th>Detalles</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in events %}
+            <tr>
+                <td>{{ ev.event_time }}</td>
+                <td>{{ ev.event_type }}</td>
+                <td>{{ ev.details }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No se registraron eventos.</p>
+    {% endif %}
+    <p><a href="{{ url_for('dashboard') }}">Volver al panel</a></p>
+</section>
+{% endblock %}

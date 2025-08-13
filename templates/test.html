@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="case-info">
+    <h2>{{ case.title }}</h2>
+    <p>{{ case.description }}</p>
+</section>
+<form method="post" action="{{ url_for('submit') }}" id="exam-form">
+    <input type="hidden" name="case_id" value="{{ case.case_id }}">
+    {% for question in questions %}
+    <fieldset class="question-block" data-question-index="{{ loop.index0 }}">
+        <legend>Pregunta {{ loop.index }}:</legend>
+        <p class="question-text">{{ question }}</p>
+        <div class="bool-inputs">
+            <label>
+                <input type="radio" name="bool_{{ loop.index0 }}" value="true" required> Verdadero
+            </label>
+            <label>
+                <input type="radio" name="bool_{{ loop.index0 }}" value="false" required> Falso
+            </label>
+        </div>
+        <label for="reason_{{ loop.index0 }}">Justificación:</label>
+        <textarea id="reason_{{ loop.index0 }}" name="reason_{{ loop.index0 }}" rows="4" required></textarea>
+    </fieldset>
+    {% endfor %}
+    <button type="submit">Enviar</button>
+</form>
+<!-- Pass session identifier to client script -->
+<script>
+    window.examSessionId = "{{ session_id }}";
+</script>
+{% endblock %}

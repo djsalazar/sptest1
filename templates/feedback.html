@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="feedback-container">
+    <h2>Resultados de la Evaluación</h2>
+    <p>Calificación total: <strong>{{ '%.2f'|format(total_score) }}</strong> / 100</p>
+    {% if paste_penalty > 0 %}
+    <p class="warning">Se aplicó una penalización por {{ paste_penalty|int }} puntos debido a eventos de pegado detectados.</p>
+    {% endif %}
+    <ol>
+    {% for answer in answers %}
+        <li>
+            <p><strong>Pregunta {{ loop.index }}:</strong> {{ case.questions[loop.index0].text }}</p>
+            <p>Su respuesta: <em>{{ 'Verdadero' if answer.user_bool else 'Falso' }}</em></p>
+            <p>Respuesta correcta: <em>{{ 'Verdadero' if case.questions[loop.index0].correct else 'Falso' }}</em></p>
+            <p>Justificación proporcionada:</p>
+            <blockquote>{{ answer.user_reason }}</blockquote>
+            <p>Puntuación: {{ '%.2f'|format(answer.score) }} / 100</p>
+            <ul class="breakdown">
+                <li>Veracidad: {{ '%.1f'|format(answer.breakdown.truth) }} pts</li>
+                <li>Argumentación: {{ '%.1f'|format(answer.breakdown.argument) }} pts</li>
+                <li>Penalización por IA: {{ '%.1f'|format(answer.breakdown.ai_penalty) }} pts</li>
+            </ul>
+        </li>
+    {% endfor %}
+    </ol>
+    <p><a href="{{ url_for('take_test', case_id=case.case_id) }}">Volver a intentar el caso</a></p>
+    <p><a href="{{ url_for('index') }}">Inicio</a></p>
+</section>
+{% endblock %}
