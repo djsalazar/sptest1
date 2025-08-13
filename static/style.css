@@ -314,3 +314,22 @@ html {
     color: #1e3a5f;
     margin-top: 0;
 }
+
+
+.feedback-content {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 4px;
+    font-style: italic;
+    line-height: 1.6;
+    margin-top: 0.5rem;
+}
+
+.no-feedback-alert {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}

@@ -125,8 +125,12 @@
                 
                 {% if answer.breakdown.feedback %}
                 <div class="ai-feedback">
-                    <h6>Retroalimentación Específica:</h6>
-                    <p>{{ answer.breakdown.feedback }}</p>
+                    <h6>📝 Retroalimentación Específica:</h6>
+                    <div class="feedback-content">{{ answer.breakdown.feedback }}</div>
+                </div>
+                {% else %}
+                <div class="no-feedback-alert">
+                    <p><em>⚠️ No se pudo generar feedback específico para esta respuesta. Posible problema con la API de IA.</em></p>
                 </div>
                 {% endif %}
             </div>

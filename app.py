@@ -160,6 +160,7 @@ def call_claude(prompt: str) -> Optional[str]:
     """
     if not CLAUDE_API_KEY:
         return None
+    
     # Construct the API request for Claude using the newer Messages API
     try:
         response = requests.post(
@@ -171,24 +172,40 @@ def call_claude(prompt: str) -> Optional[str]:
             },
             json={
                 "model": "claude-3-sonnet-20240229",
-                "max_tokens": 100,
+                "max_tokens": 200,
                 "messages": [
                     {
                         "role": "user", 
-                        "content": f"Parafrasea la siguiente pregunta manteniendo el significado exacto: '{prompt}'"
+                        "content": f"""Parafrasea la siguiente pregunta legal manteniendo EXACTAMENTE el mismo significado y estructura lógica. 
+Solo cambia algunas palabras por sinónimos y ajusta levemente la redacción, pero conserva la claridad y coherencia:
+
+"{prompt}"
+
+Responde ÚNICAMENTE con la pregunta parafraseada, sin explicaciones adicionales."""
                     }
                 ]
             },
-            timeout=10
+            timeout=15
         )
+        
         if response.status_code == 200:
             data = response.json()
             # The new API returns the completion in content[0]["text"]
             paraphrased = data["content"][0]["text"].strip()
-            return paraphrased if paraphrased else None
-    except Exception:
-        pass
-    return None
+            
+            # Verificar que la paráfrasis sea coherente (no muy corta ni muy larga)
+            if paraphrased and len(paraphrased) > 50 and len(paraphrased) < len(prompt) * 2:
+                return paraphrased
+            else:
+                print(f"Paráfrasis inválida: {paraphrased}")
+                return None
+        else:
+            print(f"Error API Claude: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"Excepción en call_claude: {e}")
+        return None
 
 
 def analyze_argumentation_with_claude(user_reason: str, case_context: str, 
@@ -425,45 +442,38 @@ def random_rephrase(question: str) -> str:
     """
     Generate a non‑trivial rephrasing of a question. The function first
     attempts to use Anthropic's API. If that fails or no API key is
-    configured, it falls back to a simple templated substitution that
-    preserves meaning. The fallback uses a handful of pre‑defined synonyms
-    to vary the text without altering its truth conditions.
+    configured, it returns the original question unchanged to maintain
+    coherence and fairness.
     """
     # Try to call Anthropic for paraphrasing
     rephrased = call_claude(question)
     if rephrased:
+        print(f"Paráfrasis exitosa: {question[:50]}... -> {rephrased[:50]}...")
         return rephrased
-    # Local fallback: replace phrases with synonyms and adjust word order
-    synonyms = {
-        "afirma": ["sostiene", "asegura", "declara"],
-        "comunidad": ["colectividad", "grupo indígena"],
-        "marca": ["signo distintivo", "registro"],
-        "patente": ["título", "registro de patente"],
-        "puede": ["es posible", "podría"]
-    }
-    tokens = question.split()
-    new_tokens = []
-    for tok in tokens:
-        base = tok.lower().strip('.,?')
-        if base in synonyms and random.random() < 0.5:
-            # choose a synonym preserving punctuation and capitalisation
-            synonym = random.choice(synonyms[base])
-            if tok[0].isupper():
-                synonym = synonym.capitalize()
-            # preserve trailing punctuation
-            punct = '' if tok[-1].isalnum() else tok[-1]
-            new_tokens.append(synonym + punct)
-        else:
-            new_tokens.append(tok)
-    # Shuffle the order of some phrases to avoid identical phrasing. We
-    # selectively swap two adjacent tokens with a low probability.
-    i = 0
-    while i < len(new_tokens) - 1:
-        if random.random() < 0.1:
-            new_tokens[i], new_tokens[i+1] = new_tokens[i+1], new_tokens[i]
-            i += 1
-        i += 1
-    return ' '.join(new_tokens)
+    
+    # If Claude API fails, return original question to maintain coherence
+    print(f"Usando pregunta original (API falló): {question[:50]}...")
+    return question
+
+def test_claude_api() -> bool:
+    """
+    Test if Claude API is working correctly.
+    """
+    if not CLAUDE_API_KEY:
+        print("❌ No se encontró CLAUDE_API_KEY")
+        return False
+    
+    test_question = "¿Esta es una pregunta de prueba?"
+    result = call_claude(test_question)
+    
+    if result:
+        print(f"✅ API de Claude funciona correctamente")
+        print(f"   Original: {test_question}")
+        print(f"   Parafraseado: {result}")
+        return True
+    else:
+        print("❌ API de Claude no está funcionando")
+        return False
 
 
 ###############################################################################
@@ -672,10 +682,22 @@ def take_comprehensive_exam() -> str:
         flash("Debe registrarse primero")
         return redirect(url_for('index'))
     
+    # Test Claude API on first load
+    print("\n=== TESTING CLAUDE API ===")
+    claude_working = test_claude_api()
+    print("=========================\n")
+    
     # Generate rephrased questions for all cases
     all_cases_data = []
     for case_id, case in CASES.items():
-        rephrased_questions = [q.rephrased() for q in case.questions]
+        print(f"\n--- Procesando Caso {case_id} ---")
+        rephrased_questions = []
+        for idx, q in enumerate(case.questions):
+            print(f"Pregunta {idx + 1} original: {q.text[:80]}...")
+            rephrased = q.rephrased()
+            print(f"Pregunta {idx + 1} final: {rephrased[:80]}...")
+            rephrased_questions.append(rephrased)
+        
         all_cases_data.append({
             'case': case,
             'questions': rephrased_questions
@@ -899,23 +921,58 @@ def view_result(result_id: int) -> str:
     result = cur.fetchone()
     if not result:
         return "Resultado no encontrado", 404
-    answers = json.loads(result['answers_json'])
-    rubric_data = json.loads(result['rubric_json'])
-    # Retrieve event logs
-    cur.execute(
-        "SELECT event_type, event_time, details FROM events WHERE result_id = ? ORDER BY event_time",
-        (result_id,)
-    )
-    events = cur.fetchall()
-    return render_template(
-        'result.html',
-        result=result,
-        answers=answers,
-        rubric=rubric_data,
-        events=events,
-        case=CASES.get(result['case_id'])
-    )
-
+    
+    try:
+        answers_data = json.loads(result['answers_json'])
+        rubric_data = json.loads(result['rubric_json'])
+        
+        # Check if this is a comprehensive exam (case_id = 0) or individual case
+        if result['case_id'] == 0:
+            # Comprehensive exam - new format
+            student_name = answers_data.get('student_name', 'N/A')
+            student_carne = answers_data.get('student_carne', 'N/A')
+            all_cases_answers = answers_data.get('all_cases', {})
+            
+            # Retrieve event logs
+            cur.execute(
+                "SELECT event_type, event_time, details FROM events WHERE result_id = ? ORDER BY event_time",
+                (result_id,)
+            )
+            events = cur.fetchall()
+            
+            return render_template(
+                'instructor_comprehensive_result.html',
+                result=result,
+                student_name=student_name,
+                student_carne=student_carne,
+                all_cases_answers=all_cases_answers,
+                rubric=rubric_data,
+                events=events,
+                cases=CASES
+            )
+        else:
+            # Individual case - old format (backward compatibility)
+            answers = answers_data if isinstance(answers_data, list) else []
+            
+            # Retrieve event logs
+            cur.execute(
+                "SELECT event_type, event_time, details FROM events WHERE result_id = ? ORDER BY event_time",
+                (result_id,)
+            )
+            events = cur.fetchall()
+            
+            return render_template(
+                'result.html',
+                result=result,
+                answers=answers,
+                rubric=rubric_data,
+                events=events,
+                case=CASES.get(result['case_id'])
+            )
+            
+    except Exception as e:
+        print(f"Error procesando resultado {result_id}: {e}")
+        return f"Error procesando resultado: {str(e)}", 500
 
 ###############################################################################
 # Run the app
