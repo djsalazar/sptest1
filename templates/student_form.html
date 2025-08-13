@@ -18,7 +18,20 @@
         {% endif %}
         {% endwith %}
         
-        <form method="post" action="{{ url_for('start_exam') }}" class="student-form">
+        <!-- Loading spinner (oculto inicialmente) -->
+        <div id="loading-spinner" class="loading-container" style="display: none;">
+            <div class="spinner"></div>
+            <div class="loading-text">
+                <h3>🤖 Preparando Examen con IA</h3>
+                <p>Generando preguntas personalizadas...</p>
+                <p><small>⏱️ Esto puede tomar 30-60 segundos</small></p>
+                <div class="loading-progress">
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" action="{{ url_for('start_exam') }}" class="student-form" id="exam-form">
             <div class="form-group">
                 <label for="student_name">Nombre Completo:</label>
                 <input type="text" id="student_name" name="student_name" required 
@@ -32,7 +45,7 @@
             </div>
             
             <div class="form-group">
-                <button type="submit" class="btn-primary">Iniciar Examen</button>
+                <button type="submit" class="btn-primary" id="start-btn">Iniciar Examen</button>
             </div>
         </form>
         
@@ -45,6 +58,13 @@
                 <li><strong>Análisis por IA</strong> con rúbrica de 9 criterios</li>
                 <li><strong>Anti-trampa:</strong> Se detecta copy-paste y uso de IA</li>
             </ul>
+            
+            <div class="performance-note">
+                <h4>⚡ Nota sobre Rendimiento:</h4>
+                <p>El sistema usa inteligencia artificial para personalizar las preguntas y evaluar respuestas. 
+                La preparación inicial puede tomar <strong>30-60 segundos</strong>. 
+                Por favor, <strong>sea paciente</strong> y no haga clic múltiples veces.</p>
+            </div>
         </div>
     </div>
 </section>
@@ -114,11 +134,16 @@
     border-radius: 5px;
     font-size: 1.1rem;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
 }
 
 .btn-primary:hover {
     background-color: #0f2744;
+}
+
+.btn-primary:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 
 .alert {
@@ -154,5 +179,113 @@
 .exam-info li {
     margin-bottom: 0.5rem;
 }
+
+.performance-note {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #e7f3ff;
+    border-left: 4px solid #0066cc;
+    border-radius: 0 4px 4px 0;
+}
+
+.performance-note h4 {
+    margin: 0 0 0.5rem 0;
+    color: #0066cc;
+}
+
+.performance-note p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Loading Spinner */
+.loading-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(30, 58, 95, 0.95);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+}
+
+.spinner {
+    border: 4px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top: 4px solid #fff;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 2rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+}
+
+.loading-text p {
+    margin: 0.5rem 0;
+    opacity: 0.9;
+}
+
+.loading-progress {
+    width: 300px;
+    height: 6px;
+    background-color: rgba(255,255,255,0.3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #ffd700;
+    width: 0%;
+    animation: progress 60s linear infinite;
+}
+
+@keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('exam-form');
+    const startBtn = document.getElementById('start-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    form.addEventListener('submit', function(e) {
+        // Validar campos
+        const name = document.getElementById('student_name').value.trim();
+        const carne = document.getElementById('student_carne').value.trim();
+        
+        if (!name || !carne) {
+            alert('Por favor complete todos los campos');
+            return false;
+        }
+        
+        // Mostrar loading y deshabilitar botón
+        startBtn.disabled = true;
+        startBtn.textContent = 'Preparando...';
+        loadingSpinner.style.display = 'flex';
+        
+        // Permitir envío del formulario
+        return true;
+    });
+});
+</script>
 {% endblock %}

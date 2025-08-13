@@ -54,11 +54,18 @@
 <script>
     window.examSessionId = "{{ session_id }}";
     
-    // Validación de justificaciones
+    // Loading para envío del examen
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('comprehensive-exam-form');
+        const submitBtn = document.querySelector('.btn-submit');
+        let isSubmitting = false;
         
         form.addEventListener('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+            
             let hasInvalidJustifications = false;
             const invalidTextareas = [];
             
@@ -66,14 +73,11 @@
             document.querySelectorAll('textarea[name*="reason"]').forEach(textarea => {
                 const justification = textarea.value.trim();
                 
-                // Justificaciones inválidas
                 if (justification.length < 20 || 
                     ['si', 'no', 'tal vez', 'no se', 'puede que si', 'puede que no', 'la verdad no entiendo', 'puedes ser'].includes(justification.toLowerCase())) {
                     
                     hasInvalidJustifications = true;
                     invalidTextareas.push(textarea);
-                    
-                    // Resaltar campo inválido
                     textarea.style.borderColor = '#dc3545';
                     textarea.style.backgroundColor = '#fff5f5';
                 }
@@ -81,44 +85,45 @@
             
             if (hasInvalidJustifications) {
                 e.preventDefault();
+                alert(`⚠️ JUSTIFICACIONES INSUFICIENTES\n\nSe detectaron justificaciones demasiado cortas o inadecuadas.\n\nREQUISITOS:\n• Mínimo 20 caracteres\n• Explicación fundamentada\n• No usar "si", "no", "tal vez", etc.\n\nPENALIZACIONES:\n• -1.0 puntos por justificaciones inadecuadas`);
                 
-                alert(`⚠️ JUSTIFICACIONES INSUFICIENTES
-
-Se detectaron justificaciones demasiado cortas o inadecuadas.
-
-REQUISITOS MÍNIMOS:
-- Mínimo 20 caracteres por justificación
-- Explicación clara y fundamentada
-- No usar respuestas como "si", "no", "tal vez", "no se"
-
-PENALIZACIONES:
-- Justificaciones muy cortas: -0.5 puntos
-- Uso de IA detectado: -1.0 puntos
-
-Por favor, proporcione justificaciones adecuadas antes de enviar.`);
-                
-                // Scroll al primer campo inválido
                 if (invalidTextareas.length > 0) {
                     invalidTextareas[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                     invalidTextareas[0].focus();
                 }
-                
                 return false;
             }
             
-            // Confirmación final
-            const confirmed = confirm(`¿Está seguro de enviar el examen?
-
-✓ Ha completado las 10 preguntas
-✓ Todas las justificaciones son adecuadas
-✓ No podrá modificar después del envío
-
-¿Confirmar envío?`);
+            const confirmed = confirm(`¿Enviar examen?\n\n✓ 10 preguntas completadas\n✓ Justificaciones adecuadas\n⚠️ No podrá modificar después\n\n¿Confirmar?`);
             
             if (!confirmed) {
                 e.preventDefault();
                 return false;
             }
+            
+            // Mostrar loading
+            isSubmitting = true;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '🤖 Evaluando con IA... <small>(30-60s)</small>';
+            submitBtn.style.backgroundColor = '#ffc107';
+            submitBtn.style.color = '#000';
+            
+            // Mostrar overlay de loading
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.innerHTML = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30,58,95,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center;">
+                    <div style="border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 60px; height: 60px; animation: spin 1s linear infinite; margin-bottom: 2rem;"></div>
+                    <h3>🤖 Evaluando Respuestas con IA</h3>
+                    <p>Analizando justificaciones con rúbrica de 9 criterios...</p>
+                    <p><small>⏱️ Tiempo estimado: 30-60 segundos</small></p>
+                </div>
+                <style>
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            `;
+            document.body.appendChild(loadingOverlay);
+            
+            return true;
         });
         
         // Limpiar estilos de error al escribir

@@ -88,6 +88,37 @@ if CLAUDE_API_KEY:
     print(f"🔑 CLAUDE_API_KEY (longitud): {len(CLAUDE_API_KEY)} caracteres")
 else:
     print("❌ CLAUDE_API_KEY no encontrado")
+    
+    
+    
+# Cache temporal para paráfrasis (evitar múltiples llamadas)
+from datetime import datetime, timedelta
+import threading
+
+PARAPHRASE_CACHE = {}
+CACHE_LOCK = threading.Lock()
+CACHE_TIMEOUT = timedelta(minutes=10)  # Cache por 10 minutos
+
+def get_cached_paraphrase(original_text: str) -> Optional[str]:
+    """Get cached paraphrase if available and not expired."""
+    with CACHE_LOCK:
+        if original_text in PARAPHRASE_CACHE:
+            cached_item = PARAPHRASE_CACHE[original_text]
+            if datetime.now() - cached_item['timestamp'] < CACHE_TIMEOUT:
+                print(f"📦 Usando paráfrasis cacheada: {original_text[:50]}...")
+                return cached_item['paraphrase']
+            else:
+                # Cache expirado, remover
+                del PARAPHRASE_CACHE[original_text]
+    return None
+
+def cache_paraphrase(original_text: str, paraphrase: str):
+    """Cache a paraphrase with timestamp."""
+    with CACHE_LOCK:
+        PARAPHRASE_CACHE[original_text] = {
+            'paraphrase': paraphrase,
+            'timestamp': datetime.now()
+        }
 ###############################################################################
 # Utility functions
 ###############################################################################
@@ -447,19 +478,24 @@ def simple_argument_evaluation(user_reason: str) -> float:
 
 def random_rephrase(question: str) -> str:
     """
-    Generate a non‑trivial rephrasing of a question. The function first
-    attempts to use Anthropic's API. If that fails or no API key is
-    configured, it returns the original question unchanged to maintain
-    coherence and fairness.
+    Generate a non‑trivial rephrasing of a question. Uses cache to avoid
+    repeated API calls for the same question.
     """
+    # Check cache first
+    cached = get_cached_paraphrase(question)
+    if cached:
+        return cached
+    
     # Try to call Anthropic for paraphrasing
     rephrased = call_claude(question)
     if rephrased:
-        print(f"Paráfrasis exitosa: {question[:50]}... -> {rephrased[:50]}...")
+        print(f"✅ Paráfrasis nueva: {question[:50]}... -> {rephrased[:50]}...")
+        cache_paraphrase(question, rephrased)
         return rephrased
     
-    # If Claude API fails, return original question to maintain coherence
-    print(f"Usando pregunta original (API falló): {question[:50]}...")
+    # If Claude API fails, cache original to avoid future calls
+    print(f"⚠️ API falló, usando original: {question[:50]}...")
+    cache_paraphrase(question, question)
     return question
 
 def test_claude_api() -> bool:
