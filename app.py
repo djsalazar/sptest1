@@ -626,118 +626,134 @@ CASES: Dict[int, Case] = {
 
 @app.route('/')
 def index() -> str:
-    """Landing page redirects to the test for the first case by default."""
-    return redirect(url_for('take_test', case_id=1))
+    """Landing page with student registration form."""
+    return render_template('student_form.html')
 
 
-@app.route('/test/<int:case_id>', methods=['GET'])
-def take_test(case_id: int) -> str:
+@app.route('/start_exam', methods=['POST'])
+def start_exam() -> str:
+    """Process student information and start the comprehensive exam."""
+    student_name = request.form.get('student_name', '').strip()
+    student_carne = request.form.get('student_carne', '').strip()
+    
+    if not student_name or not student_carne:
+        flash("Por favor complete todos los campos")
+        return redirect(url_for('index'))
+    
+    # Store student info in session
+    session['student_name'] = student_name
+    session['student_carne'] = student_carne
+    session['student_session'] = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    
+    return redirect(url_for('take_comprehensive_exam'))
+
+
+@app.route('/exam')
+def take_comprehensive_exam() -> str:
     """
-    Display the test page for a given case. The questions are rephrased on
-    each load to discourage rote memorisation. A unique ``session_id`` is
-    generated and stored in the session to associate events and results.
+    Display all 5 cases with their questions in a single comprehensive exam.
     """
-    case = CASES.get(case_id)
-    if not case:
-        return "Case not found", 404
-    # Generate a short session identifier to tie logs and results together
-    # across the life of the test. This is not used for security and is
-    # distinct from Flask's session ID.
-    if 'student_session' not in session:
-        session['student_session'] = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    rephrased_questions = [q.rephrased() for q in case.questions]
+    if 'student_name' not in session or 'student_carne' not in session:
+        flash("Debe registrarse primero")
+        return redirect(url_for('index'))
+    
+    # Generate rephrased questions for all cases
+    all_cases_data = []
+    for case_id, case in CASES.items():
+        rephrased_questions = [q.rephrased() for q in case.questions]
+        all_cases_data.append({
+            'case': case,
+            'questions': rephrased_questions
+        })
+    
     return render_template(
-        'test.html',
-        case=case,
-        questions=rephrased_questions,
+        'comprehensive_exam.html',
+        all_cases_data=all_cases_data,
+        student_name=session.get('student_name'),
+        student_carne=session.get('student_carne'),
         session_id=session['student_session']
     )
 
 
-@app.route('/log_event', methods=['POST'])
-def log_event() -> str:
+@app.route('/submit_comprehensive', methods=['POST'])
+def submit_comprehensive() -> str:
     """
-    Receive a frontend log event. Events include 'start_question', 'end_question'
-    and 'paste'. Logs are stored in the ``events`` table. The payload must
-    include a ``session_id`` corresponding to the current student session.
-    The server defers committing the result_id until a test is submitted;
-    interim logs are temporarily stored in the session.
+    Process the comprehensive exam submission for all 5 cases.
     """
-    data = request.get_json(silent=True) or {}
-    event_type = data.get('event_type')
-    details = data.get('details', '')
-    timestamp = datetime.utcnow().isoformat()
-    # Append to session logs for later association
-    logs = session.setdefault('pending_events', [])
-    logs.append({
-        'event_type': event_type,
-        'timestamp': timestamp,
-        'details': details,
-    })
-    session['pending_events'] = logs
-    return 'ok'
-
-
-@app.route('/submit', methods=['POST'])
-def submit() -> str:
-    """
-    Process the student's submission. Compute scores for each question,
-    aggregate them, store the result and any pending event logs, then
-    render the feedback page.
-    """
-    case_id = int(request.form.get('case_id', 0))
-    case = CASES.get(case_id)
-    if not case:
-        return "Case not found", 404
-    # Retrieve boolean answers and justifications
-    answers: List[Dict[str, any]] = []
-    total_score = 0.0
-    rubric_breakdown: List[Dict[str, any]] = []
+    if 'student_name' not in session or 'student_carne' not in session:
+        flash("Sesión expirada")
+        return redirect(url_for('index'))
     
-    for idx, q in enumerate(case.questions):
-        bool_str = request.form.get(f'bool_{idx}', 'false')
-        user_bool = bool_str.lower() == 'true'
-        user_reason = request.form.get(f'reason_{idx}', '').strip()
+    # Process all cases
+    all_answers = {}
+    total_score = 0.0
+    all_rubric_breakdown = {}
+    
+    for case_id, case in CASES.items():
+        case_answers = []
+        case_rubric = []
         
-        # Use AI evaluation for detailed analysis
-        score, breakdown = evaluate_answer_with_ai(
-            user_bool=user_bool,
-            user_reason=user_reason,
-            correct_bool=q.correct,
-            case_context=case.description,
-            question_text=q.text
-        )
+        for idx, q in enumerate(case.questions):
+            field_name = f'case_{case_id}_bool_{idx}'
+            reason_name = f'case_{case_id}_reason_{idx}'
+            
+            bool_str = request.form.get(field_name, 'false')
+            user_bool = bool_str.lower() == 'true'
+            user_reason = request.form.get(reason_name, '').strip()
+            
+            # Use AI evaluation for detailed analysis
+            score, breakdown = evaluate_answer_with_ai(
+                user_bool=user_bool,
+                user_reason=user_reason,
+                correct_bool=q.correct,
+                case_context=case.description,
+                question_text=q.text
+            )
+            
+            case_answers.append({
+                'user_bool': user_bool,
+                'user_reason': user_reason,
+                'correct': q.correct,
+                'score': score,
+                'breakdown': breakdown,
+            })
+            total_score += score
+            case_rubric.append(breakdown)
         
-        answers.append({
-            'user_bool': user_bool,
-            'user_reason': user_reason,
-            'correct': q.correct,
-            'score': score,
-            'breakdown': breakdown,
-        })
-        total_score += score
-        rubric_breakdown.append(breakdown)
-        
+        all_answers[case_id] = case_answers
+        all_rubric_breakdown[case_id] = case_rubric
+    
     # Apply paste penalties if any were recorded for this session
     pending_events = session.pop('pending_events', [])
     paste_events = [ev for ev in pending_events if ev.get('event_type') == 'paste']
-    paste_penalty = len(paste_events) * 10.0 / max(len(case.questions), 1)
+    paste_penalty = len(paste_events) * 2.0  # 2 points per paste event across all questions
     total_score = max(total_score - paste_penalty, 0.0)
+    
     # Save the result to the database
     db = get_db()
     timestamp = datetime.utcnow().isoformat()
-    student_id = session.get('student_session', '')
-    answers_json = json.dumps(answers)
+    student_id = f"{session.get('student_carne')} - {session.get('student_name')}"
+    
+    # Create a comprehensive answers JSON
+    comprehensive_data = {
+        'student_name': session.get('student_name'),
+        'student_carne': session.get('student_carne'),
+        'all_cases': all_answers
+    }
+    
+    answers_json = json.dumps(comprehensive_data)
     rubric_json = json.dumps({
-        'question_breakdown': rubric_breakdown,
+        'all_cases_breakdown': all_rubric_breakdown,
         'paste_penalty': paste_penalty,
     })
+    
     cur = db.cursor()
     cur.execute(
         "INSERT INTO results (timestamp, student_id, case_id, answers_json, score, rubric_json) VALUES (?, ?, ?, ?, ?, ?)",
-        (timestamp, student_id, case_id, answers_json, total_score, rubric_json)
+        (timestamp, student_id, 0, answers_json, total_score, rubric_json)  # case_id = 0 for comprehensive
     )
     result_id = cur.lastrowid
+    
     # Persist logs
     for ev in pending_events:
         cur.execute(
@@ -745,17 +761,27 @@ def submit() -> str:
             (result_id, ev['event_type'], ev['timestamp'], ev.get('details', ''))
         )
     db.commit()
+    
     # Clear session data tied to this test
     session.pop('student_session', None)
-    # Render feedback
+    
+    # Render comprehensive feedback
     return render_template(
-        'feedback.html',
-        case=case,
-        answers=answers,
+        'comprehensive_feedback.html',
+        all_cases_data=all_answers,
+        cases=CASES,
         total_score=total_score,
         paste_penalty=paste_penalty,
+        student_name=session.get('student_name'),
+        student_carne=session.get('student_carne')
     )
 
+
+# Mantener la ruta original para compatibilidad
+@app.route('/test/<int:case_id>', methods=['GET'])
+def take_test(case_id: int) -> str:
+    """Individual case test (for backward compatibility)"""
+    return redirect(url_for('index'))
 
 ###############################################################################
 # Routes for instructors

@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="exam-header">
+    <div class="student-info">
+        <h2>Examen Integral - Conocimientos Tradicionales</h2>
+        <p><strong>Estudiante:</strong> {{ student_name }} | <strong>Carné:</strong> {{ student_carne }}</p>
+        <p class="exam-instructions">
+            Complete todos los 5 casos. Cada caso tiene 2 preguntas de Verdadero/Falso que requieren justificación detallada.
+        </p>
+    </div>
+</section>
+
+<form method="post" action="{{ url_for('submit_comprehensive') }}" id="comprehensive-exam-form">
+    {% for case_data in all_cases_data %}
+    <section class="case-section">
+        <div class="case-info">
+            <h3>Caso {{ case_data.case.case_id }}: {{ case_data.case.title }}</h3>
+            <p>{{ case_data.case.description }}</p>
+        </div>
+        
+        {% for question in case_data.questions %}
+        <fieldset class="question-block" data-question-index="case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
+            <legend>Caso {{ case_data.case.case_id }} - Pregunta {{ loop.index }}:</legend>
+            <p class="question-text">{{ question }}</p>
+            <div class="bool-inputs">
+                <label>
+                    <input type="radio" name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" value="true" required> Verdadero
+                </label>
+                <label>
+                    <input type="radio" name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" value="false" required> Falso
+                </label>
+            </div>
+            <label for="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}">Justificación:</label>
+            <textarea id="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
+                      name="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
+                      rows="4" required 
+                      placeholder="Proporcione una justificación detallada de su respuesta..."></textarea>
+        </fieldset>
+        {% endfor %}
+    </section>
+    {% endfor %}
+    
+    <div class="submit-section">
+        <button type="submit" class="btn-submit">Enviar Examen Completo</button>
+        <p class="submit-warning">
+            ⚠️ Asegúrese de haber completado todas las preguntas antes de enviar. 
+            No podrá modificar sus respuestas después del envío.
+        </p>
+    </div>
+</form>
+
+<!-- Pass session identifier to client script -->
+<script>
+    window.examSessionId = "{{ session_id }}";
+</script>
+
+<style>
+.exam-header {
+    background-color: #e6f0ff;
+    border-left: 4px solid #1e3a5f;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 0 4px 4px 0;
+}
+
+.student-info h2 {
+    color: #1e3a5f;
+    margin-top: 0;
+}
+
+.exam-instructions {
+    font-style: italic;
+    color: #666;
+}
+
+.case-section {
+    margin-bottom: 3rem;
+    border: 2px solid #1e3a5f;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.case-info {
+    background-color: #1e3a5f;
+    color: white;
+    padding: 1rem;
+    margin-bottom: 0;
+}
+
+.case-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+}
+
+.case-info p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.case-section .question-block {
+    margin: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.submit-section {
+    text-align: center;
+    margin: 3rem 0;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #1e3a5f;
+}
+
+.btn-submit {
+    background-color: #28a745;
+    color: white;
+    padding: 1rem 3rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-bottom: 1rem;
+}
+
+.btn-submit:hover {
+    background-color: #218838;
+}
+
+.submit-warning {
+    color: #856404;
+    font-style: italic;
+    margin: 1rem 0 0 0;
+}
+</style>
+{% endblock %}

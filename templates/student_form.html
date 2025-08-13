@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="student-form-container">
+    <div class="form-card">
+        <h2>Registro de Estudiante</h2>
+        <p class="form-description">
+            Por favor complete sus datos para iniciar el examen integral de Conocimientos Tradicionales y Propiedad Intelectual.
+            <br><strong>El examen incluye 5 casos con 2 preguntas cada uno (10 preguntas total).</strong>
+        </p>
+        
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-warning">
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        
+        <form method="post" action="{{ url_for('start_exam') }}" class="student-form">
+            <div class="form-group">
+                <label for="student_name">Nombre Completo:</label>
+                <input type="text" id="student_name" name="student_name" required 
+                       placeholder="Ingrese su nombre completo" maxlength="100">
+            </div>
+            
+            <div class="form-group">
+                <label for="student_carne">Número de Carné:</label>
+                <input type="text" id="student_carne" name="student_carne" required 
+                       placeholder="Ingrese su número de carné" maxlength="20">
+            </div>
+            
+            <div class="form-group">
+                <button type="submit" class="btn-primary">Iniciar Examen</button>
+            </div>
+        </form>
+        
+        <div class="exam-info">
+            <h3>Información del Examen:</h3>
+            <ul>
+                <li><strong>5 casos</strong> de estudio</li>
+                <li><strong>2 preguntas</strong> por caso (10 total)</li>
+                <li><strong>Verdadero/Falso</strong> con justificación obligatoria</li>
+                <li><strong>Análisis por IA</strong> con rúbrica de 9 criterios</li>
+                <li><strong>Anti-trampa:</strong> Se detecta copy-paste y uso de IA</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<style>
+.student-form-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+    padding: 2rem 0;
+}
+
+.form-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    max-width: 500px;
+    width: 100%;
+}
+
+.form-card h2 {
+    color: #1e3a5f;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.form-description {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #666;
+    line-height: 1.6;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #1e3a5f;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #1e3a5f;
+}
+
+.btn-primary {
+    width: 100%;
+    background-color: #1e3a5f;
+    color: white;
+    padding: 1rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #0f2744;
+}
+
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+}
+
+.exam-info {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border-left: 4px solid #1e3a5f;
+}
+
+.exam-info h3 {
+    color: #1e3a5f;
+    margin-bottom: 1rem;
+}
+
+.exam-info ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.exam-info li {
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
