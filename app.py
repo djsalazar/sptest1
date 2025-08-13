@@ -37,18 +37,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
-# Debug logging
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Print environment variables at startup
-print(f"🔑 CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
-if CLAUDE_API_KEY:
-    print(f"🔑 CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
-else:
-    print("❌ CLAUDE_API_KEY no encontrado")
-
 # Load environment variables from a .env file if present. This allows
 # operators to provide sensitive settings like API keys without
 # embedding them directly in the source code or passing them on the
@@ -78,6 +66,7 @@ CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 # we follow the specification.
 INSTRUCTOR_PASSWORD = "S4nPablo2025"
 
+
 # File path to the SQLite database. Stored relative to this file.
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "exam.db"
@@ -87,7 +76,18 @@ app = Flask(__name__)
 # Secret key is required for sessions; generate a random value if none
 app.secret_key = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits, k=32)))
 
+# Debug logging (DESPUÉS de definir las variables)
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+# Print environment variables at startup
+print(f"🔑 CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
+if CLAUDE_API_KEY:
+    print(f"🔑 CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
+    print(f"🔑 CLAUDE_API_KEY (longitud): {len(CLAUDE_API_KEY)} caracteres")
+else:
+    print("❌ CLAUDE_API_KEY no encontrado")
 ###############################################################################
 # Utility functions
 ###############################################################################
