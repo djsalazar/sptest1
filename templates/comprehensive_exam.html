@@ -50,8 +50,87 @@
 </form>
 
 <!-- Pass session identifier to client script -->
+<!-- Pass session identifier to client script -->
 <script>
     window.examSessionId = "{{ session_id }}";
+    
+    // Validación de justificaciones
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('comprehensive-exam-form');
+        
+        form.addEventListener('submit', function(e) {
+            let hasInvalidJustifications = false;
+            const invalidTextareas = [];
+            
+            // Validar todas las justificaciones
+            document.querySelectorAll('textarea[name*="reason"]').forEach(textarea => {
+                const justification = textarea.value.trim();
+                
+                // Justificaciones inválidas
+                if (justification.length < 20 || 
+                    ['si', 'no', 'tal vez', 'no se', 'puede que si', 'puede que no', 'la verdad no entiendo', 'puedes ser'].includes(justification.toLowerCase())) {
+                    
+                    hasInvalidJustifications = true;
+                    invalidTextareas.push(textarea);
+                    
+                    // Resaltar campo inválido
+                    textarea.style.borderColor = '#dc3545';
+                    textarea.style.backgroundColor = '#fff5f5';
+                }
+            });
+            
+            if (hasInvalidJustifications) {
+                e.preventDefault();
+                
+                alert(`⚠️ JUSTIFICACIONES INSUFICIENTES
+
+Se detectaron justificaciones demasiado cortas o inadecuadas.
+
+REQUISITOS MÍNIMOS:
+- Mínimo 20 caracteres por justificación
+- Explicación clara y fundamentada
+- No usar respuestas como "si", "no", "tal vez", "no se"
+
+PENALIZACIONES:
+- Justificaciones muy cortas: -0.5 puntos
+- Uso de IA detectado: -1.0 puntos
+
+Por favor, proporcione justificaciones adecuadas antes de enviar.`);
+                
+                // Scroll al primer campo inválido
+                if (invalidTextareas.length > 0) {
+                    invalidTextareas[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                    invalidTextareas[0].focus();
+                }
+                
+                return false;
+            }
+            
+            // Confirmación final
+            const confirmed = confirm(`¿Está seguro de enviar el examen?
+
+✓ Ha completado las 10 preguntas
+✓ Todas las justificaciones son adecuadas
+✓ No podrá modificar después del envío
+
+¿Confirmar envío?`);
+            
+            if (!confirmed) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Limpiar estilos de error al escribir
+        document.querySelectorAll('textarea[name*="reason"]').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                if (this.value.trim().length >= 20) {
+                    this.style.borderColor = '';
+                    this.style.backgroundColor = '';
+                }
+            });
+        });
+    });
 </script>
 
 <style>

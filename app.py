@@ -157,26 +157,10 @@ def ensure_schema(db: sqlite3.Connection) -> None:
 
 
 def call_claude(prompt: str) -> Optional[str]:
-    """
-    Attempt to paraphrase the given prompt using Anthropic's API. If the
-    ``CLAUDE_API_KEY`` environment variable is not set or the request
-    fails, return ``None``. This function intentionally does not raise
-    exceptions so that the rest of the application can continue running.
-
-    Parameters
-    ----------
-    prompt: str
-        Text to send to the Anthropic API for paraphrasing.
-
-    Returns
-    -------
-    Optional[str]
-        A paraphrased version of the prompt if successful, otherwise ``None``.
-    """
+    """..."""
     if not CLAUDE_API_KEY:
         return None
     
-    # Construct the API request for Claude using the newer Messages API
     try:
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
@@ -186,7 +170,7 @@ def call_claude(prompt: str) -> Optional[str]:
                 "anthropic-version": "2023-06-01"
             },
             json={
-                "model": "claude-3-sonnet-20240229",
+                "model": "claude-3-5-sonnet-20241022",  # MODELO CORRECTO
                 "max_tokens": 200,
                 "messages": [
                     {
@@ -295,7 +279,7 @@ INSTRUCCIONES:
                 "anthropic-version": "2023-06-01"
             },
             json={
-                "model": "claude-3-sonnet-20240229",
+                "model": "claude-3-5-sonnet-20241022",  # MODELO CORRECTO
                 "max_tokens": 1500,
                 "messages": [
                     {
@@ -365,12 +349,12 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     Total per question: 10 points (100 total / 10 questions)
     - Truth: 5 points (50%)
     - Argumentation: 4 points (40%) 
-    - Penalties: up to -1 point (10%)
+    - Penalties: up to -2 points (20%)
     """
     print(f"\n=== EVALUANDO RESPUESTA ===")
     print(f"Pregunta: {question_text[:100]}...")
     print(f"Respuesta usuario: {user_bool} (Correcta: {correct_bool})")
-    print(f"Justificación: {user_reason[:100]}...")
+    print(f"Justificación: '{user_reason}'")
     
     scores = {
         "truth": 5.0 if user_bool == correct_bool else 0.0,  # 5 points max
@@ -382,25 +366,36 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     
     print(f"Puntos por veracidad: {scores['truth']}/5")
     
-    # Check for AI usage indicators
-    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje", "claude", "bot"]
-    ai_detected = any(ind in user_reason.lower() for ind in ai_indicators)
-    if ai_detected:
-        scores["ai_penalty"] = -1.0  # -1 point penalty
-        print(f"⚠️ Uso de IA detectado - Penalización: -1 punto")
+    # SISTEMA DE PENALIZACIONES MEJORADO
+    reason_lower = user_reason.strip().lower()
+    reason_length = len(user_reason.strip())
     
-    # Check for copy-paste indicators (very short answers or suspicious patterns)
-    copy_indicators = len(user_reason.strip()) < 10 or user_reason.strip().lower() in ["si", "no", "verdadero", "falso"]
-    if copy_indicators:
-        scores["ai_penalty"] -= 0.5  # Additional -0.5 point penalty
-        print(f"⚠️ Respuesta sospechosa (muy corta) - Penalización adicional: -0.5 puntos")
+    # 1. Penalización por respuestas muy cortas o inválidas
+    invalid_answers = ['si', 'no', 'tal vez', 'no se', 'puede que si', 'puede que no', 'la verdad no entiendo', 'puedes ser']
+    if reason_length < 10 or reason_lower in invalid_answers:
+        scores["ai_penalty"] -= 1.0
+        print(f"❌ Justificación inadecuada: '{user_reason}' - Penalización: -1.0 puntos")
+    elif reason_length < 20:
+        scores["ai_penalty"] -= 0.5
+        print(f"⚠️ Justificación muy corta ({reason_length} chars) - Penalización: -0.5 puntos")
+    
+    # 2. Penalización por uso de IA
+    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje", "claude", "bot", "artificial intelligence"]
+    if any(ind in reason_lower for ind in ai_indicators):
+        scores["ai_penalty"] -= 1.0
+        print(f"❌ Uso de IA detectado - Penalización: -1.0 puntos")
+    
+    # 3. Límite de penalización (no puede bajar de 0)
+    if scores["ai_penalty"] < -2.0:
+        scores["ai_penalty"] = -2.0
+        print(f"⚠️ Penalización limitada a -2.0 puntos máximo")
     
     # If no Claude API key, fall back to simple evaluation
     if not CLAUDE_API_KEY:
         print("❌ No hay CLAUDE_API_KEY - usando evaluación simple")
         simple_score = simple_argument_evaluation(user_reason)
         scores["argument"] = simple_score * 0.1  # Scale to 4 points max (40 -> 4)
-        scores["feedback"] = "Evaluación automática básica - sin análisis detallado por IA. Configure CLAUDE_API_KEY para análisis avanzado."
+        scores["feedback"] = "Evaluación automática básica - Configure CLAUDE_API_KEY para análisis avanzado con IA."
         print(f"Puntos por argumentación (simple): {scores['argument']}/4")
     else:
         # Use Claude API for detailed analysis
@@ -409,22 +404,24 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
             ai_analysis = analyze_argumentation_with_claude(
                 user_reason, case_context, question_text, user_bool, correct_bool
             )
-            # Scale AI score from 40 points to 4 points (40% of 10)
             scores["argument"] = ai_analysis["total_argument_score"] * 0.1  # 40 -> 4 points
             scores["ai_analysis"] = ai_analysis["criteria_scores"]
             scores["feedback"] = ai_analysis["feedback"]
             print(f"✅ Análisis IA exitoso - Puntos: {scores['argument']}/4")
-            print(f"📝 Feedback: {scores['feedback'][:100]}...")
         except Exception as e:
-            # Fallback to simple evaluation if API fails
             print(f"❌ Error en Claude API: {e}")
             simple_score = simple_argument_evaluation(user_reason)
             scores["argument"] = simple_score * 0.1
-            scores["feedback"] = f"Error en análisis IA ({str(e)[:50]}...) - se usó evaluación básica."
+            scores["feedback"] = f"Error en el análisis de IA. Se aplicó evaluación básica automática. Para justificaciones más cortas, considere proporcionar mayor detalle y fundamentación legal."
             print(f"Puntos por argumentación (fallback): {scores['argument']}/4")
     
+    # Calcular total (no puede ser negativo)
     total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
-    print(f"📊 Puntuación total: {total}/10 (Verdad: {scores['truth']}, Arg: {scores['argument']:.1f}, Penalty: {scores['ai_penalty']})")
+    
+    print(f"📊 Puntuación total: {total}/10")
+    print(f"   - Veracidad: {scores['truth']}/5")
+    print(f"   - Argumentación: {scores['argument']:.1f}/4") 
+    print(f"   - Penalizaciones: {scores['ai_penalty']}")
     print("=== FIN EVALUACIÓN ===\n")
     
     return total, scores
