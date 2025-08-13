@@ -242,6 +242,7 @@ def analyze_argumentation_with_claude(user_reason: str, case_context: str,
                                     question_text: str, user_bool: bool, correct_bool: bool) -> Dict[str, any]:
     """
     Use Claude API to analyze argumentation quality based on detailed rubric.
+    Updated for 5-point scale.
     """
     print(f"🔄 Preparando llamada a Claude API...")
     
@@ -280,7 +281,7 @@ RÚBRICA DE EVALUACIÓN (escala 1-5 para cada criterio):
 
 INSTRUCCIONES:
 1. Evalúa cada criterio con una puntuación de 1-5
-2. Calcula el promedio de los 9 criterios y multiplícalo por 8 para obtener la puntuación sobre 40 puntos
+2. Calcula el promedio de los 9 criterios y multiplícalo por 5 para obtener la puntuación sobre 5 puntos
 3. Proporciona feedback específico y constructivo
 4. Responde ÚNICAMENTE en formato JSON válido:
 
@@ -296,7 +297,7 @@ INSTRUCCIONES:
         "presentacion_estilo": 4,
         "innovacion_creatividad": 2
     }},
-    "total_argument_score": 23.2,
+    "total_argument_score": 25.0,
     "feedback": "La argumentación muestra algunos elementos positivos pero requiere mayor fundamentación legal y análisis crítico más profundo..."
 }}"""
 
@@ -354,7 +355,10 @@ INSTRUCCIONES:
 
 
 def simple_argument_evaluation(user_reason: str) -> float:
-    """Fallback simple evaluation when Claude API is not available."""
+    """
+    Fallback simple evaluation when Claude API is not available.
+    Updated to return max 40 points (will be scaled to 5).
+    """
     reason = user_reason.strip()
     word_count = len(reason.split())
     
@@ -369,7 +373,7 @@ def simple_argument_evaluation(user_reason: str) -> float:
     marker_hits = sum(1 for m in markers if m in reason.lower())
     marker_factor = min(marker_hits / len(markers), 1.0)
     
-    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0
+    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0  # Return 40 max, will be scaled to 5
 
 
 def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: bool, 
@@ -377,10 +381,11 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     """
     Evaluate answer using AI for sophisticated argumentation analysis.
     
-    Total per question: 10 points (100 total / 10 questions)
-    - Truth: 5 points (50%)
-    - Argumentation: 4 points (40%) 
-    - Penalties: up to -2 points (20%)
+    Nueva estructura:
+    - Total por pregunta: 10 puntos
+    - Veracidad: 5 puntos (50%)
+    - Argumentación: 5 puntos (50%) 
+    - Penalizaciones: variables (restan del total)
     """
     print(f"\n=== EVALUANDO RESPUESTA ===")
     print(f"Pregunta: {question_text[:100]}...")
@@ -389,7 +394,7 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     
     scores = {
         "truth": 5.0 if user_bool == correct_bool else 0.0,  # 5 points max
-        "argument": 0.0,
+        "argument": 0.0,  # 5 points max (updated from 4)
         "ai_penalty": 0.0,
         "ai_analysis": {},
         "feedback": ""
@@ -417,17 +422,17 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
         print(f"❌ Uso de IA detectado - Penalización: -1.0 puntos")
     
     # 3. Límite de penalización (no puede bajar de 0)
-    if scores["ai_penalty"] < -2.0:
-        scores["ai_penalty"] = -2.0
-        print(f"⚠️ Penalización limitada a -2.0 puntos máximo")
+    if scores["ai_penalty"] < -3.0:  # Increased limit for new scale
+        scores["ai_penalty"] = -3.0
+        print(f"⚠️ Penalización limitada a -3.0 puntos máximo")
     
     # If no Claude API key, fall back to simple evaluation
     if not CLAUDE_API_KEY:
         print("❌ No hay CLAUDE_API_KEY - usando evaluación simple")
         simple_score = simple_argument_evaluation(user_reason)
-        scores["argument"] = simple_score * 0.1  # Scale to 4 points max (40 -> 4)
+        scores["argument"] = simple_score * 0.125  # Scale to 5 points max (40 -> 5)
         scores["feedback"] = "Evaluación automática básica - Configure CLAUDE_API_KEY para análisis avanzado con IA."
-        print(f"Puntos por argumentación (simple): {scores['argument']}/4")
+        print(f"Puntos por argumentación (simple): {scores['argument']}/5")
     else:
         # Use Claude API for detailed analysis
         print(f"🤖 Intentando análisis con Claude API...")
@@ -435,30 +440,34 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
             ai_analysis = analyze_argumentation_with_claude(
                 user_reason, case_context, question_text, user_bool, correct_bool
             )
-            scores["argument"] = ai_analysis["total_argument_score"] * 0.1  # 40 -> 4 points
+            # Updated scaling: 45 points max -> 5 points
+            scores["argument"] = ai_analysis["total_argument_score"] * 0.111  # 45 -> 5 points
             scores["ai_analysis"] = ai_analysis["criteria_scores"]
             scores["feedback"] = ai_analysis["feedback"]
-            print(f"✅ Análisis IA exitoso - Puntos: {scores['argument']}/4")
+            print(f"✅ Análisis IA exitoso - Puntos: {scores['argument']}/5")
         except Exception as e:
             print(f"❌ Error en Claude API: {e}")
             simple_score = simple_argument_evaluation(user_reason)
-            scores["argument"] = simple_score * 0.1
-            scores["feedback"] = f"Error en el análisis de IA. Se aplicó evaluación básica automática. Para justificaciones más cortas, considere proporcionar mayor detalle y fundamentación legal."
-            print(f"Puntos por argumentación (fallback): {scores['argument']}/4")
+            scores["argument"] = simple_score * 0.125  # Scale to 5 points max
+            scores["feedback"] = f"Error en el análisis de IA. Se aplicó evaluación básica automática."
+            print(f"Puntos por argumentación (fallback): {scores['argument']}/5")
     
     # Calcular total (no puede ser negativo)
     total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
     
     print(f"📊 Puntuación total: {total}/10")
     print(f"   - Veracidad: {scores['truth']}/5")
-    print(f"   - Argumentación: {scores['argument']:.1f}/4") 
+    print(f"   - Argumentación: {scores['argument']:.1f}/5") 
     print(f"   - Penalizaciones: {scores['ai_penalty']}")
     print("=== FIN EVALUACIÓN ===\n")
     
     return total, scores
 
 def simple_argument_evaluation(user_reason: str) -> float:
-    """Fallback simple evaluation when Claude API is not available."""
+    """
+    Fallback simple evaluation when Claude API is not available.
+    Updated to return max 40 points (will be scaled to 5).
+    """
     reason = user_reason.strip()
     word_count = len(reason.split())
     
@@ -473,7 +482,7 @@ def simple_argument_evaluation(user_reason: str) -> float:
     marker_hits = sum(1 for m in markers if m in reason.lower())
     marker_factor = min(marker_hits / len(markers), 1.0)
     
-    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0  # Return 40 max, will be scaled down
+    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0  # Return 40 max, will be scaled to 5
 
 
 def random_rephrase(question: str) -> str:
