@@ -358,18 +358,13 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     """
     Evaluate answer using AI for sophisticated argumentation analysis.
     
-    Uses Anthropic's Claude API to analyze the argumentation quality based on
-    a detailed rubric with 9 criteria, each scored 1-5.
-    
-    Returns
-    -------
-    float
-        The total score for the answer.
-    Dict[str, any]
-        A breakdown including truth score, AI analysis, and feedback.
+    Total per question: 10 points (100 total / 10 questions)
+    - Truth: 5 points (50%)
+    - Argumentation: 4 points (40%) 
+    - Penalties: up to -1 point (10%)
     """
     scores = {
-        "truth": 50.0 if user_bool == correct_bool else 0.0,
+        "truth": 5.0 if user_bool == correct_bool else 0.0,  # 5 points max
         "argument": 0.0,
         "ai_penalty": 0.0,
         "ai_analysis": {},
@@ -379,11 +374,11 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     # Check for AI usage indicators
     ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje"]
     if any(ind in user_reason.lower() for ind in ai_indicators):
-        scores["ai_penalty"] = -10.0
+        scores["ai_penalty"] = -1.0  # -1 point penalty
     
     # If no Claude API key, fall back to simple evaluation
     if not CLAUDE_API_KEY:
-        scores["argument"] = simple_argument_evaluation(user_reason)
+        scores["argument"] = simple_argument_evaluation(user_reason) * 0.1  # Scale to 4 points max
         scores["feedback"] = "Evaluación automática básica - sin análisis detallado por IA."
         total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
         return total, scores
@@ -393,17 +388,37 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
         ai_analysis = analyze_argumentation_with_claude(
             user_reason, case_context, question_text, user_bool, correct_bool
         )
-        scores["argument"] = ai_analysis["total_argument_score"]
+        # Scale AI score from 40 points to 4 points (40% of 10)
+        scores["argument"] = ai_analysis["total_argument_score"] * 0.1  # 40 -> 4 points
         scores["ai_analysis"] = ai_analysis["criteria_scores"]
         scores["feedback"] = ai_analysis["feedback"]
     except Exception as e:
         # Fallback to simple evaluation if API fails
         print(f"Claude API error: {e}")
-        scores["argument"] = simple_argument_evaluation(user_reason)
+        scores["argument"] = simple_argument_evaluation(user_reason) * 0.1
         scores["feedback"] = "Error en análisis IA - se usó evaluación básica."
     
     total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
     return total, scores
+
+
+def simple_argument_evaluation(user_reason: str) -> float:
+    """Fallback simple evaluation when Claude API is not available."""
+    reason = user_reason.strip()
+    word_count = len(reason.split())
+    
+    if word_count < 20:
+        length_factor = 0.0
+    elif word_count <= 150:
+        length_factor = (word_count - 20) / 130
+    else:
+        length_factor = 1.0
+    
+    markers = ["porque", "sin embargo", "por lo tanto", "no obstante", "por consiguiente"]
+    marker_hits = sum(1 for m in markers if m in reason.lower())
+    marker_factor = min(marker_hits / len(markers), 1.0)
+    
+    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0  # Return 40 max, will be scaled down
 
 
 def random_rephrase(question: str) -> str:
@@ -673,6 +688,29 @@ def take_comprehensive_exam() -> str:
         student_carne=session.get('student_carne'),
         session_id=session['student_session']
     )
+    
+@app.route('/log_event', methods=['POST'])
+def log_event() -> str:
+    """
+    Receive a frontend log event. Events include 'start_question', 'end_question'
+    and 'paste'. Logs are stored in the ``events`` table. The payload must
+    include a ``session_id`` corresponding to the current student session.
+    The server defers committing the result_id until a test is submitted;
+    interim logs are temporarily stored in the session.
+    """
+    data = request.get_json(silent=True) or {}
+    event_type = data.get('event_type')
+    details = data.get('details', '')
+    timestamp = datetime.utcnow().isoformat()
+    # Append to session logs for later association
+    logs = session.setdefault('pending_events', [])
+    logs.append({
+        'event_type': event_type,
+        'timestamp': timestamp,
+        'details': details,
+    })
+    session['pending_events'] = logs
+    return 'ok'
 
 
 @app.route('/submit_comprehensive', methods=['POST'])
@@ -726,7 +764,7 @@ def submit_comprehensive() -> str:
     # Apply paste penalties if any were recorded for this session
     pending_events = session.pop('pending_events', [])
     paste_events = [ev for ev in pending_events if ev.get('event_type') == 'paste']
-    paste_penalty = len(paste_events) * 2.0  # 2 points per paste event across all questions
+    paste_penalty = len(paste_events) * 0.5  # 0.5 points per paste event
     total_score = max(total_score - paste_penalty, 0.0)
     
     # Save the result to the database
