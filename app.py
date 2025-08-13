@@ -36,6 +36,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+
+# Debug logging
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Print environment variables at startup
+print(f"🔑 CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
+if CLAUDE_API_KEY:
+    print(f"🔑 CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
+else:
+    print("❌ CLAUDE_API_KEY no encontrado")
+
 # Load environment variables from a .env file if present. This allows
 # operators to provide sensitive settings like API keys without
 # embedding them directly in the source code or passing them on the
@@ -48,6 +61,8 @@ load_dotenv()
 import requests
 from flask import (Flask, g, redirect, render_template, request, session,
                    url_for, flash)
+
+
 
 
 ###############################################################################
@@ -213,6 +228,14 @@ def analyze_argumentation_with_claude(user_reason: str, case_context: str,
     """
     Use Claude API to analyze argumentation quality based on detailed rubric.
     """
+    print(f"🔄 Preparando llamada a Claude API...")
+    
+    if not CLAUDE_API_KEY:
+        raise Exception("CLAUDE_API_KEY no configurado")
+    
+    if len(CLAUDE_API_KEY) < 20:
+        raise Exception(f"CLAUDE_API_KEY parece inválido (longitud: {len(CLAUDE_API_KEY)})")
+    
     prompt = f"""Eres un profesor experto en propiedad intelectual y conocimientos tradicionales. 
 Evalúa la siguiente argumentación de un estudiante usando la rúbrica proporcionada.
 
@@ -230,92 +253,40 @@ ARGUMENTACIÓN DEL ESTUDIANTE:
 
 RÚBRICA DE EVALUACIÓN (escala 1-5 para cada criterio):
 
-1. Opinión propia fundada:
-- 1: No presenta opinión o es infundada
-- 2: Opinión superficial, sin respaldo normativo/doctrinal
-- 3: Opinión con algún respaldo, pero limitado o irrelevante
-- 4: Opinión clara y fundamentada en norma, doctrina o jurisprudencia pertinente
-- 5: Opinión sólida, argumentada y respaldada con múltiples fuentes relevantes y actuales
-
-2. Valores éticos:
-- 1: Ignora totalmente los aspectos éticos del caso
-- 2: Menciona valores de forma tangencial o confusa
-- 3: Reconoce valores éticos básicos, sin análisis profundo
-- 4: Analiza valores éticos pertinentes y su relación con el caso
-- 5: Analiza de forma crítica, equilibrada y profunda los valores éticos
-
-3. Lenguaje y terminología:
-- 1: Uso incorrecto de terminología, lenguaje coloquial inapropiado
-- 2: Uso parcial de términos técnicos, con errores
-- 3: Lenguaje adecuado pero poco preciso
-- 4: Lenguaje técnico-jurídico claro y correcto
-- 5: Lenguaje jurídico-forense preciso, adaptado al contexto
-
-4. Citas y precisión normativa:
-- 1: No cita norma alguna o las cita erróneamente
-- 2: Citas incompletas o imprecisas
-- 3: Citas correctas pero sin exactitud plena
-- 4: Cita correctamente artículos, leyes, tratados o sentencias pertinentes
-- 5: Cita exacta y puntual, integrando jurisprudencia y doctrina
-
-5. Estructura y coherencia:
-- 1: Argumento desorganizado, incoherente o contradictorio
-- 2: Estructura débil, con saltos lógicos
-- 3: Organización aceptable, con transiciones poco claras
-- 4: Estructura lógica, coherente y bien organizada
-- 5: Argumentación impecablemente estructurada
-
-6. Profundidad y pertinencia de la fundamentación:
-- 1: Fundamentación ausente o irrelevante
-- 2: Fundamentación parcial, con fuentes poco pertinentes
-- 3: Fundamentación aceptable, aunque limitada
-- 4: Fundamentación sólida y pertinente
-- 5: Fundamentación exhaustiva, con doctrina y jurisprudencia actualizadas
-
-7. Capacidad crítica:
-- 1: No hay análisis crítico ni contraste de fuentes
-- 2: Contrasta superficialmente una sola fuente
-- 3: Identifica algunas diferencias entre fuentes
-- 4: Contrasta y analiza diferencias con sentido crítico
-- 5: Contrasta profundamente, propone soluciones innovadoras
-
-8. Presentación y estilo:
-- 1: Redacción confusa, con errores graves
-- 2: Redacción aceptable pero con errores frecuentes
-- 3: Redacción clara pero con errores menores
-- 4: Redacción clara, sin errores significativos
-- 5: Redacción impecable, sin errores
-
-9. Innovación y creatividad argumentativa:
-- 1: Argumentación repetitiva, sin originalidad
-- 2: Ideas poco desarrolladas o irrelevantes
-- 3: Alguna idea novedosa pero sin desarrollo
-- 4: Soluciones o enfoques novedosos y bien fundamentados
-- 5: Soluciones creativas, interdisciplinarias y viables
+1. Opinión propia fundada (1-5)
+2. Valores éticos (1-5)
+3. Lenguaje y terminología (1-5)
+4. Citas y precisión normativa (1-5)
+5. Estructura y coherencia (1-5)
+6. Profundidad y pertinencia (1-5)
+7. Capacidad crítica (1-5)
+8. Presentación y estilo (1-5)
+9. Innovación y creatividad (1-5)
 
 INSTRUCCIONES:
 1. Evalúa cada criterio con una puntuación de 1-5
 2. Calcula el promedio de los 9 criterios y multiplícalo por 8 para obtener la puntuación sobre 40 puntos
-3. Proporciona feedback específico y constructivo para cada criterio
-4. Responde ÚNICAMENTE en el siguiente formato JSON:
+3. Proporciona feedback específico y constructivo
+4. Responde ÚNICAMENTE en formato JSON válido:
 
 {{
     "criteria_scores": {{
-        "opinion_fundada": <1-5>,
-        "valores_eticos": <1-5>,
-        "lenguaje_terminologia": <1-5>,
-        "citas_precision": <1-5>,
-        "estructura_coherencia": <1-5>,
-        "profundidad_fundamentacion": <1-5>,
-        "capacidad_critica": <1-5>,
-        "presentacion_estilo": <1-5>,
-        "innovacion_creatividad": <1-5>
+        "opinion_fundada": 3,
+        "valores_eticos": 2,
+        "lenguaje_terminologia": 4,
+        "citas_precision": 1,
+        "estructura_coherencia": 3,
+        "profundidad_fundamentacion": 2,
+        "capacidad_critica": 2,
+        "presentacion_estilo": 4,
+        "innovacion_creatividad": 2
     }},
-    "total_argument_score": <puntuación sobre 40>,
-    "feedback": "Feedback detallado y constructivo explicando las fortalezas y áreas de mejora en la argumentación..."
+    "total_argument_score": 23.2,
+    "feedback": "La argumentación muestra algunos elementos positivos pero requiere mayor fundamentación legal y análisis crítico más profundo..."
 }}"""
 
     try:
+        print(f"🌐 Enviando solicitud a Claude...")
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -336,19 +307,35 @@ INSTRUCCIONES:
             timeout=30
         )
         
+        print(f"📡 Respuesta HTTP: {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
             content = result["content"][0]["text"]
+            print(f"📄 Contenido recibido: {content[:200]}...")
             
             # Parse the JSON response
-            import json
-            analysis = json.loads(content)
-            return analysis
+            try:
+                analysis = json.loads(content)
+                print(f"✅ JSON parseado correctamente")
+                return analysis
+            except json.JSONDecodeError as je:
+                print(f"❌ Error parseando JSON: {je}")
+                raise Exception(f"Respuesta JSON inválida de Claude: {content[:100]}...")
         else:
-            raise Exception(f"API request failed with status {response.status_code}")
+            error_text = response.text
+            print(f"❌ Error HTTP {response.status_code}: {error_text}")
+            raise Exception(f"API request failed with status {response.status_code}: {error_text}")
             
+    except requests.exceptions.Timeout:
+        print(f"⏰ Timeout en solicitud a Claude")
+        raise Exception("Timeout en solicitud a Claude API")
+    except requests.exceptions.RequestException as re:
+        print(f"🌐 Error de conexión: {re}")
+        raise Exception(f"Error de conexión a Claude API: {str(re)}")
     except Exception as e:
-        raise Exception(f"Error calling Claude API: {str(e)}")
+        print(f"💥 Error inesperado: {e}")
+        raise Exception(f"Error inesperado en Claude API: {str(e)}")
 
 
 def simple_argument_evaluation(user_reason: str) -> float:
@@ -380,6 +367,11 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     - Argumentation: 4 points (40%) 
     - Penalties: up to -1 point (10%)
     """
+    print(f"\n=== EVALUANDO RESPUESTA ===")
+    print(f"Pregunta: {question_text[:100]}...")
+    print(f"Respuesta usuario: {user_bool} (Correcta: {correct_bool})")
+    print(f"Justificación: {user_reason[:100]}...")
+    
     scores = {
         "truth": 5.0 if user_bool == correct_bool else 0.0,  # 5 points max
         "argument": 0.0,
@@ -388,36 +380,54 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
         "feedback": ""
     }
     
+    print(f"Puntos por veracidad: {scores['truth']}/5")
+    
     # Check for AI usage indicators
-    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje"]
-    if any(ind in user_reason.lower() for ind in ai_indicators):
+    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje", "claude", "bot"]
+    ai_detected = any(ind in user_reason.lower() for ind in ai_indicators)
+    if ai_detected:
         scores["ai_penalty"] = -1.0  # -1 point penalty
+        print(f"⚠️ Uso de IA detectado - Penalización: -1 punto")
+    
+    # Check for copy-paste indicators (very short answers or suspicious patterns)
+    copy_indicators = len(user_reason.strip()) < 10 or user_reason.strip().lower() in ["si", "no", "verdadero", "falso"]
+    if copy_indicators:
+        scores["ai_penalty"] -= 0.5  # Additional -0.5 point penalty
+        print(f"⚠️ Respuesta sospechosa (muy corta) - Penalización adicional: -0.5 puntos")
     
     # If no Claude API key, fall back to simple evaluation
     if not CLAUDE_API_KEY:
-        scores["argument"] = simple_argument_evaluation(user_reason) * 0.1  # Scale to 4 points max
-        scores["feedback"] = "Evaluación automática básica - sin análisis detallado por IA."
-        total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
-        return total, scores
-    
-    # Use Claude API for detailed analysis
-    try:
-        ai_analysis = analyze_argumentation_with_claude(
-            user_reason, case_context, question_text, user_bool, correct_bool
-        )
-        # Scale AI score from 40 points to 4 points (40% of 10)
-        scores["argument"] = ai_analysis["total_argument_score"] * 0.1  # 40 -> 4 points
-        scores["ai_analysis"] = ai_analysis["criteria_scores"]
-        scores["feedback"] = ai_analysis["feedback"]
-    except Exception as e:
-        # Fallback to simple evaluation if API fails
-        print(f"Claude API error: {e}")
-        scores["argument"] = simple_argument_evaluation(user_reason) * 0.1
-        scores["feedback"] = "Error en análisis IA - se usó evaluación básica."
+        print("❌ No hay CLAUDE_API_KEY - usando evaluación simple")
+        simple_score = simple_argument_evaluation(user_reason)
+        scores["argument"] = simple_score * 0.1  # Scale to 4 points max (40 -> 4)
+        scores["feedback"] = "Evaluación automática básica - sin análisis detallado por IA. Configure CLAUDE_API_KEY para análisis avanzado."
+        print(f"Puntos por argumentación (simple): {scores['argument']}/4")
+    else:
+        # Use Claude API for detailed analysis
+        print(f"🤖 Intentando análisis con Claude API...")
+        try:
+            ai_analysis = analyze_argumentation_with_claude(
+                user_reason, case_context, question_text, user_bool, correct_bool
+            )
+            # Scale AI score from 40 points to 4 points (40% of 10)
+            scores["argument"] = ai_analysis["total_argument_score"] * 0.1  # 40 -> 4 points
+            scores["ai_analysis"] = ai_analysis["criteria_scores"]
+            scores["feedback"] = ai_analysis["feedback"]
+            print(f"✅ Análisis IA exitoso - Puntos: {scores['argument']}/4")
+            print(f"📝 Feedback: {scores['feedback'][:100]}...")
+        except Exception as e:
+            # Fallback to simple evaluation if API fails
+            print(f"❌ Error en Claude API: {e}")
+            simple_score = simple_argument_evaluation(user_reason)
+            scores["argument"] = simple_score * 0.1
+            scores["feedback"] = f"Error en análisis IA ({str(e)[:50]}...) - se usó evaluación básica."
+            print(f"Puntos por argumentación (fallback): {scores['argument']}/4")
     
     total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
+    print(f"📊 Puntuación total: {total}/10 (Verdad: {scores['truth']}, Arg: {scores['argument']:.1f}, Penalty: {scores['ai_penalty']})")
+    print("=== FIN EVALUACIÓN ===\n")
+    
     return total, scores
-
 
 def simple_argument_evaluation(user_reason: str) -> float:
     """Fallback simple evaluation when Claude API is not available."""
