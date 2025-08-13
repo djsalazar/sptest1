@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  exam_app:
+    build: .
+    container_name: exam_app
+    # Map the internal port 8000 (exposed by Flask) to an external
+    # port on the host. Adjust the host port (left side) as needed to
+    # avoid conflicts with existing services. For example, to expose
+    # the app on port 8010 use "8010:8000".
+    ports:
+      - "8010:8000"
+    # Pass environment variables into the container. Compose will read
+    # values from a .env file in the same directory as this file. See
+    # .env.example for guidance.
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    restart: unless-stopped
