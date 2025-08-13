@@ -15,12 +15,70 @@
             <p>Respuesta correcta: <em>{{ 'Verdadero' if answer.correct else 'Falso' }}</em></p>
             <p>Justificación:</p>
             <blockquote>{{ answer.user_reason }}</blockquote>
+            
+            <!-- Breakdown básico -->
             <ul class="breakdown">
                 <li>Veracidad: {{ '%.1f'|format(answer.breakdown.truth) }} pts</li>
                 <li>Argumentación: {{ '%.1f'|format(answer.breakdown.argument) }} pts</li>
+                {% if answer.breakdown.ai_penalty < 0 %}
                 <li>Penalización IA: {{ '%.1f'|format(answer.breakdown.ai_penalty) }} pts</li>
+                {% endif %}
                 <li>Puntuación total: {{ '%.2f'|format(answer.score) }} pts</li>
             </ul>
+            
+            <!-- Análisis detallado de IA si está disponible -->
+            {% if answer.breakdown.ai_analysis %}
+            <div class="ai-analysis">
+                <h4>Análisis de IA - Rúbrica Detallada</h4>
+                <div class="criteria-scores">
+                    <div class="criteria-grid">
+                        <div class="criterion">
+                            <span class="criterion-name">Opinión fundada:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.opinion_fundada }}">{{ answer.breakdown.ai_analysis.opinion_fundada }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Valores éticos:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.valores_eticos }}">{{ answer.breakdown.ai_analysis.valores_eticos }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Lenguaje y terminología:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.lenguaje_terminologia }}">{{ answer.breakdown.ai_analysis.lenguaje_terminologia }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Citas y precisión:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.citas_precision }}">{{ answer.breakdown.ai_analysis.citas_precision }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Estructura y coherencia:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.estructura_coherencia }}">{{ answer.breakdown.ai_analysis.estructura_coherencia }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Profundidad:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.profundidad_fundamentacion }}">{{ answer.breakdown.ai_analysis.profundidad_fundamentacion }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Capacidad crítica:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.capacidad_critica }}">{{ answer.breakdown.ai_analysis.capacidad_critica }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Presentación:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.presentacion_estilo }}">{{ answer.breakdown.ai_analysis.presentacion_estilo }}/5</span>
+                        </div>
+                        <div class="criterion">
+                            <span class="criterion-name">Innovación:</span>
+                            <span class="score score-{{ answer.breakdown.ai_analysis.innovacion_creatividad }}">{{ answer.breakdown.ai_analysis.innovacion_creatividad }}/5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if answer.breakdown.feedback %}
+                <div class="ai-feedback">
+                    <h5>Feedback de IA:</h5>
+                    <p>{{ answer.breakdown.feedback }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
         </li>
         {% endfor %}
     </ol>

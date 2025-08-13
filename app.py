@@ -20,10 +20,8 @@ This application serves two primary audiences:
 
 The application is intentionally straightforward and self‑contained. It
 uses only Flask and SQLite for persistence, making it feasible to build
-and deploy within a couple of hours. The code also includes a stub for
-integrating Anthropic’s Claude API should an API key be provided in the
-environment, although the application does not depend on it for core
-functionality.
+and deploy within a couple of hours. The code also includes integration
+with Anthropic's Claude API for sophisticated argumentation analysis.
 """
 
 from __future__ import annotations
@@ -49,7 +47,7 @@ load_dotenv()
 
 import requests
 from flask import (Flask, g, redirect, render_template, request, session,
-                   url_for)
+                   url_for, flash)
 
 
 ###############################################################################
@@ -57,7 +55,7 @@ from flask import (Flask, g, redirect, render_template, request, session,
 ###############################################################################
 
 # When set, this environment variable should contain a valid Anthropic API
-# key. The ``call_claude`` function uses it to paraphrase questions.
+# key. The ``analyze_argumentation_with_claude`` function uses it to analyze arguments.
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 
 # Instructor password. In a production deployment this should be stored in
@@ -162,37 +160,256 @@ def call_claude(prompt: str) -> Optional[str]:
     """
     if not CLAUDE_API_KEY:
         return None
-    # Construct the API request for Claude. The Anthropic v1 completions
-    # endpoint expects a JSON payload with ``prompt`` and ``max_tokens``.
+    # Construct the API request for Claude using the newer Messages API
     try:
         response = requests.post(
-            "https://api.anthropic.com/v1/complete",
+            "https://api.anthropic.com/v1/messages",
             headers={
                 "x-api-key": CLAUDE_API_KEY,
-                "content-type": "application/json"
+                "content-type": "application/json",
+                "anthropic-version": "2023-06-01"
             },
             json={
-                "prompt": f"Human: Paraphrase the following question while keeping the meaning unchanged: '{prompt}'\nAssistant:",
-                "model": "claude-2",
-                "max_tokens": 64,
-                "temperature": 0.5,
+                "model": "claude-3-sonnet-20240229",
+                "max_tokens": 100,
+                "messages": [
+                    {
+                        "role": "user", 
+                        "content": f"Parafrasea la siguiente pregunta manteniendo el significado exacto: '{prompt}'"
+                    }
+                ]
             },
-            timeout=5
+            timeout=10
         )
         if response.status_code == 200:
             data = response.json()
-            # The API returns the completion in the ``completion`` field.
-            paraphrased = data.get("completion", '').strip()
+            # The new API returns the completion in content[0]["text"]
+            paraphrased = data["content"][0]["text"].strip()
             return paraphrased if paraphrased else None
     except Exception:
         pass
     return None
 
 
+def analyze_argumentation_with_claude(user_reason: str, case_context: str, 
+                                    question_text: str, user_bool: bool, correct_bool: bool) -> Dict[str, any]:
+    """
+    Use Claude API to analyze argumentation quality based on detailed rubric.
+    """
+    prompt = f"""Eres un profesor experto en propiedad intelectual y conocimientos tradicionales. 
+Evalúa la siguiente argumentación de un estudiante usando la rúbrica proporcionada.
+
+CONTEXTO DEL CASO:
+{case_context}
+
+PREGUNTA:
+{question_text}
+
+RESPUESTA DEL ESTUDIANTE: {"Verdadero" if user_bool else "Falso"}
+RESPUESTA CORRECTA: {"Verdadero" if correct_bool else "Falso"}
+
+ARGUMENTACIÓN DEL ESTUDIANTE:
+{user_reason}
+
+RÚBRICA DE EVALUACIÓN (escala 1-5 para cada criterio):
+
+1. Opinión propia fundada:
+- 1: No presenta opinión o es infundada
+- 2: Opinión superficial, sin respaldo normativo/doctrinal
+- 3: Opinión con algún respaldo, pero limitado o irrelevante
+- 4: Opinión clara y fundamentada en norma, doctrina o jurisprudencia pertinente
+- 5: Opinión sólida, argumentada y respaldada con múltiples fuentes relevantes y actuales
+
+2. Valores éticos:
+- 1: Ignora totalmente los aspectos éticos del caso
+- 2: Menciona valores de forma tangencial o confusa
+- 3: Reconoce valores éticos básicos, sin análisis profundo
+- 4: Analiza valores éticos pertinentes y su relación con el caso
+- 5: Analiza de forma crítica, equilibrada y profunda los valores éticos
+
+3. Lenguaje y terminología:
+- 1: Uso incorrecto de terminología, lenguaje coloquial inapropiado
+- 2: Uso parcial de términos técnicos, con errores
+- 3: Lenguaje adecuado pero poco preciso
+- 4: Lenguaje técnico-jurídico claro y correcto
+- 5: Lenguaje jurídico-forense preciso, adaptado al contexto
+
+4. Citas y precisión normativa:
+- 1: No cita norma alguna o las cita erróneamente
+- 2: Citas incompletas o imprecisas
+- 3: Citas correctas pero sin exactitud plena
+- 4: Cita correctamente artículos, leyes, tratados o sentencias pertinentes
+- 5: Cita exacta y puntual, integrando jurisprudencia y doctrina
+
+5. Estructura y coherencia:
+- 1: Argumento desorganizado, incoherente o contradictorio
+- 2: Estructura débil, con saltos lógicos
+- 3: Organización aceptable, con transiciones poco claras
+- 4: Estructura lógica, coherente y bien organizada
+- 5: Argumentación impecablemente estructurada
+
+6. Profundidad y pertinencia de la fundamentación:
+- 1: Fundamentación ausente o irrelevante
+- 2: Fundamentación parcial, con fuentes poco pertinentes
+- 3: Fundamentación aceptable, aunque limitada
+- 4: Fundamentación sólida y pertinente
+- 5: Fundamentación exhaustiva, con doctrina y jurisprudencia actualizadas
+
+7. Capacidad crítica:
+- 1: No hay análisis crítico ni contraste de fuentes
+- 2: Contrasta superficialmente una sola fuente
+- 3: Identifica algunas diferencias entre fuentes
+- 4: Contrasta y analiza diferencias con sentido crítico
+- 5: Contrasta profundamente, propone soluciones innovadoras
+
+8. Presentación y estilo:
+- 1: Redacción confusa, con errores graves
+- 2: Redacción aceptable pero con errores frecuentes
+- 3: Redacción clara pero con errores menores
+- 4: Redacción clara, sin errores significativos
+- 5: Redacción impecable, sin errores
+
+9. Innovación y creatividad argumentativa:
+- 1: Argumentación repetitiva, sin originalidad
+- 2: Ideas poco desarrolladas o irrelevantes
+- 3: Alguna idea novedosa pero sin desarrollo
+- 4: Soluciones o enfoques novedosos y bien fundamentados
+- 5: Soluciones creativas, interdisciplinarias y viables
+
+INSTRUCCIONES:
+1. Evalúa cada criterio con una puntuación de 1-5
+2. Calcula el promedio de los 9 criterios y multiplícalo por 8 para obtener la puntuación sobre 40 puntos
+3. Proporciona feedback específico y constructivo para cada criterio
+4. Responde ÚNICAMENTE en el siguiente formato JSON:
+
+{{
+    "criteria_scores": {{
+        "opinion_fundada": <1-5>,
+        "valores_eticos": <1-5>,
+        "lenguaje_terminologia": <1-5>,
+        "citas_precision": <1-5>,
+        "estructura_coherencia": <1-5>,
+        "profundidad_fundamentacion": <1-5>,
+        "capacidad_critica": <1-5>,
+        "presentacion_estilo": <1-5>,
+        "innovacion_creatividad": <1-5>
+    }},
+    "total_argument_score": <puntuación sobre 40>,
+    "feedback": "Feedback detallado y constructivo explicando las fortalezas y áreas de mejora en la argumentación..."
+}}"""
+
+    try:
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": CLAUDE_API_KEY,
+                "content-type": "application/json",
+                "anthropic-version": "2023-06-01"
+            },
+            json={
+                "model": "claude-3-sonnet-20240229",
+                "max_tokens": 1500,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            content = result["content"][0]["text"]
+            
+            # Parse the JSON response
+            import json
+            analysis = json.loads(content)
+            return analysis
+        else:
+            raise Exception(f"API request failed with status {response.status_code}")
+            
+    except Exception as e:
+        raise Exception(f"Error calling Claude API: {str(e)}")
+
+
+def simple_argument_evaluation(user_reason: str) -> float:
+    """Fallback simple evaluation when Claude API is not available."""
+    reason = user_reason.strip()
+    word_count = len(reason.split())
+    
+    if word_count < 20:
+        length_factor = 0.0
+    elif word_count <= 150:
+        length_factor = (word_count - 20) / 130
+    else:
+        length_factor = 1.0
+    
+    markers = ["porque", "sin embargo", "por lo tanto", "no obstante", "por consiguiente"]
+    marker_hits = sum(1 for m in markers if m in reason.lower())
+    marker_factor = min(marker_hits / len(markers), 1.0)
+    
+    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0
+
+
+def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: bool, 
+                           case_context: str, question_text: str) -> Tuple[float, Dict[str, any]]:
+    """
+    Evaluate answer using AI for sophisticated argumentation analysis.
+    
+    Uses Anthropic's Claude API to analyze the argumentation quality based on
+    a detailed rubric with 9 criteria, each scored 1-5.
+    
+    Returns
+    -------
+    float
+        The total score for the answer.
+    Dict[str, any]
+        A breakdown including truth score, AI analysis, and feedback.
+    """
+    scores = {
+        "truth": 50.0 if user_bool == correct_bool else 0.0,
+        "argument": 0.0,
+        "ai_penalty": 0.0,
+        "ai_analysis": {},
+        "feedback": ""
+    }
+    
+    # Check for AI usage indicators
+    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje"]
+    if any(ind in user_reason.lower() for ind in ai_indicators):
+        scores["ai_penalty"] = -10.0
+    
+    # If no Claude API key, fall back to simple evaluation
+    if not CLAUDE_API_KEY:
+        scores["argument"] = simple_argument_evaluation(user_reason)
+        scores["feedback"] = "Evaluación automática básica - sin análisis detallado por IA."
+        total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
+        return total, scores
+    
+    # Use Claude API for detailed analysis
+    try:
+        ai_analysis = analyze_argumentation_with_claude(
+            user_reason, case_context, question_text, user_bool, correct_bool
+        )
+        scores["argument"] = ai_analysis["total_argument_score"]
+        scores["ai_analysis"] = ai_analysis["criteria_scores"]
+        scores["feedback"] = ai_analysis["feedback"]
+    except Exception as e:
+        # Fallback to simple evaluation if API fails
+        print(f"Claude API error: {e}")
+        scores["argument"] = simple_argument_evaluation(user_reason)
+        scores["feedback"] = "Error en análisis IA - se usó evaluación básica."
+    
+    total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
+    return total, scores
+
+
 def random_rephrase(question: str) -> str:
     """
     Generate a non‑trivial rephrasing of a question. The function first
-    attempts to use Anthropic’s API. If that fails or no API key is
+    attempts to use Anthropic's API. If that fails or no API key is
     configured, it falls back to a simple templated substitution that
     preserves meaning. The fallback uses a handful of pre‑defined synonyms
     to vary the text without altering its truth conditions.
@@ -232,86 +449,6 @@ def random_rephrase(question: str) -> str:
             i += 1
         i += 1
     return ' '.join(new_tokens)
-
-
-def evaluate_answer(user_bool: bool, user_reason: str,
-                    correct_bool: bool, case_keywords: List[str]) -> Tuple[float, Dict[str, float]]:
-    """
-    Compute a numeric score and per‑criterion breakdown for a single
-    true/false answer and its justification.
-
-    The rubric allocates points as follows:
-
-    - **Truthfulness (50 pts)**: Awarded if the user's boolean answer
-      matches the correct answer.
-    - **Argumentation quality (40 pts)**: Based on length, the presence of
-      discourse markers, and the inclusion of keywords from the case. The
-      score scales up to 40 points.
-    - **AI usage penalty (−10 pts)**: Deducted if the answer contains
-      obvious indicators of generative AI usage (e.g. names of AI models
-      or unnatural phrasing). A penalty cannot push the total below zero.
-    - **Paste penalty (−10 pts)**: The paste penalty is not applied here
-      because paste detection is handled separately in ``finalise_result``.
-
-    Parameters
-    ----------
-    user_bool: bool
-        The student's selected boolean (True/False).
-    user_reason: str
-        Free‑form text justification provided by the student.
-    correct_bool: bool
-        The correct answer for the question.
-    case_keywords: List[str]
-        A list of keywords relevant to the underlying case. Used to
-        gauge whether the student is referencing the case in their
-        justification.
-
-    Returns
-    -------
-    float
-        The total score for the answer.
-    Dict[str, float]
-        A breakdown of scores by criterion.
-    """
-    scores: Dict[str, float] = {
-        "truth": 0.0,
-        "argument": 0.0,
-        "ai_penalty": 0.0,
-    }
-    # Truthfulness
-    if user_bool == correct_bool:
-        scores["truth"] = 50.0
-
-    # Argumentation quality
-    reason = user_reason.strip()
-    word_count = len(reason.split())
-    # Points for length: full marks for 50–150 words, proportional below
-    if word_count < 20:
-        length_factor = 0.0
-    elif word_count <= 150:
-        length_factor = (word_count - 20) / 130  # linear scale from 0 to ~1
-    else:
-        length_factor = 1.0
-
-    # Points for discourse markers
-    markers = ["porque", "sin embargo", "por lo tanto", "no obstante", "por consiguiente"]
-    marker_hits = sum(1 for m in markers if m in reason.lower())
-    marker_factor = min(marker_hits / len(markers), 1.0)
-
-    # Points for keywords
-    keyword_hits = sum(1 for kw in case_keywords if kw.lower() in reason.lower())
-    keyword_factor = min(keyword_hits / max(len(case_keywords), 1), 1.0)
-
-    argument_score = (length_factor * 0.4 + marker_factor * 0.3 + keyword_factor * 0.3) * 40.0
-    scores["argument"] = argument_score
-
-    # AI usage penalty
-    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje"]
-    if any(ind in reason.lower() for ind in ai_indicators):
-        scores["ai_penalty"] = -10.0
-
-    total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
-    return total, scores
 
 
 ###############################################################################
@@ -556,19 +693,21 @@ def submit() -> str:
     answers: List[Dict[str, any]] = []
     total_score = 0.0
     rubric_breakdown: List[Dict[str, any]] = []
+    
     for idx, q in enumerate(case.questions):
         bool_str = request.form.get(f'bool_{idx}', 'false')
         user_bool = bool_str.lower() == 'true'
         user_reason = request.form.get(f'reason_{idx}', '').strip()
-        score, breakdown = evaluate_answer(
+        
+        # Use AI evaluation for detailed analysis
+        score, breakdown = evaluate_answer_with_ai(
             user_bool=user_bool,
             user_reason=user_reason,
             correct_bool=q.correct,
-            case_keywords=q.keywords
+            case_context=case.description,
+            question_text=q.text
         )
-        # If paste events occurred during this question, apply a penalty
-        # by reducing the score by 10. Paste events are counted globally per
-        # session and applied evenly across all questions.
+        
         answers.append({
             'user_bool': user_bool,
             'user_reason': user_reason,
@@ -578,6 +717,7 @@ def submit() -> str:
         })
         total_score += score
         rubric_breakdown.append(breakdown)
+        
     # Apply paste penalties if any were recorded for this session
     pending_events = session.pop('pending_events', [])
     paste_events = [ev for ev in pending_events if ev.get('event_type') == 'paste']

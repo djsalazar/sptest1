@@ -16,30 +16,31 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const sessionId = window.examSessionId || '';
-    if (!sessionId) {
-        // Without a session identifier we do not log events.
-        return;
+    if (sessionId) {
+        // Track whether each question has already been started.
+        const startedQuestions = {};
+        // Attach event listeners to textareas for paste and focus/blur logging.
+        document.querySelectorAll('fieldset.question-block').forEach(fieldset => {
+            const idx = fieldset.getAttribute('data-question-index');
+            const textarea = fieldset.querySelector('textarea');
+            if (!textarea) return;
+            textarea.addEventListener('focus', () => {
+                if (!startedQuestions[idx]) {
+                    startedQuestions[idx] = true;
+                    logEvent('start_question', { question_index: idx });
+                }
+            });
+            textarea.addEventListener('blur', () => {
+                logEvent('end_question', { question_index: idx });
+            });
+            textarea.addEventListener('paste', () => {
+                logEvent('paste', { question_index: idx });
+            });
+        });
     }
-    // Track whether each question has already been started.
-    const startedQuestions = {};
-    // Attach event listeners to textareas for paste and focus/blur logging.
-    document.querySelectorAll('fieldset.question-block').forEach(fieldset => {
-        const idx = fieldset.getAttribute('data-question-index');
-        const textarea = fieldset.querySelector('textarea');
-        if (!textarea) return;
-        textarea.addEventListener('focus', () => {
-            if (!startedQuestions[idx]) {
-                startedQuestions[idx] = true;
-                logEvent('start_question', { question_index: idx });
-            }
-        });
-        textarea.addEventListener('blur', () => {
-            logEvent('end_question', { question_index: idx });
-        });
-        textarea.addEventListener('paste', () => {
-            logEvent('paste', { question_index: idx });
-        });
-    });
+
+    // Apply dynamic score colors for AI analysis
+    applyScoreColors();
 
     function logEvent(type, details) {
         fetch('/log_event', {
@@ -54,6 +55,21 @@ document.addEventListener('DOMContentLoaded', () => {
             })
         }).catch(() => {
             // Ignore errors; logging is best‑effort.
+        });
+    }
+
+    function applyScoreColors() {
+        // Apply color classes to score elements based on their content
+        document.querySelectorAll('.score').forEach(scoreEl => {
+            const scoreText = scoreEl.textContent.trim();
+            const scoreMatch = scoreText.match(/(\d+)\/5/);
+            if (scoreMatch) {
+                const score = parseInt(scoreMatch[1]);
+                // Remove existing score classes
+                scoreEl.classList.remove('score-1', 'score-2', 'score-3', 'score-4', 'score-5');
+                // Add appropriate score class
+                scoreEl.classList.add(`score-${score}`);
+            }
         });
     }
 });
