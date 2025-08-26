@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+
 # Load environment variables from a .env file if present
 from dotenv import load_dotenv
 load_dotenv()
@@ -758,6 +759,102 @@ def view_result(result_id: int) -> str:
             )
             events = cur.fetchall()
             
+            # ===== NUEVA FUNCIÓN DE PROCESAMIENTO DE DATOS =====
+            def process_answers_for_breakdown(all_cases_answers):
+                """
+                Procesa los datos para extraer las respuestas con breakdown.argument > 3
+                Reemplaza la lógica compleja del template Jinja2
+                """
+                valid_answers_count = 0
+                
+                if not all_cases_answers:
+                    return valid_answers_count
+                
+                try:
+                    # Iterar por todos los casos
+                    for case_key, case_data in all_cases_answers.items():
+                        # Verificar si case_data tiene answers
+                        answers = None
+                        
+                        if hasattr(case_data, 'answers'):
+                            answers = case_data.answers
+                        elif isinstance(case_data, dict) and 'answers' in case_data:
+                            answers = case_data['answers']
+                        
+                        if answers:
+                            # Convertir generator a lista si es necesario
+                            if hasattr(answers, '__iter__') and not isinstance(answers, (str, dict)):
+                                try:
+                                    answers = list(answers)
+                                except TypeError:
+                                    # Si no se puede convertir a lista, continuar
+                                    continue
+                            
+                            # Procesar cada respuesta
+                            for answer in answers:
+                                try:
+                                    # Verificar si tiene breakdown.argument > 3
+                                    breakdown_value = None
+                                    
+                                    if hasattr(answer, 'breakdown') and hasattr(answer.breakdown, 'argument'):
+                                        breakdown_value = answer.breakdown.argument
+                                    elif isinstance(answer, dict) and 'breakdown' in answer:
+                                        breakdown = answer['breakdown']
+                                        if isinstance(breakdown, dict) and 'argument' in breakdown:
+                                            breakdown_value = breakdown['argument']
+                                    
+                                    # Contar si el valor es mayor a 3
+                                    if breakdown_value is not None and breakdown_value > 3:
+                                        valid_answers_count += 1
+                                        
+                                except (AttributeError, TypeError, KeyError) as e:
+                                    # Log del error para debugging (opcional)
+                                    # print(f"Error procesando respuesta: {e}")
+                                    continue
+                                    
+                except Exception as e:
+                    # Log del error general (opcional)
+                    # print(f"Error en process_answers_for_breakdown: {e}")
+                    pass
+                
+                return valid_answers_count
+            
+            # ===== CALCULAR DATOS ADICIONALES =====
+            valid_answers_count = process_answers_for_breakdown(all_cases_answers)
+            
+            # También puedes agregar otros cálculos útiles aquí
+            def get_additional_stats(all_cases_answers):
+                """Calcular estadísticas adicionales si es necesario"""
+                stats = {
+                    'total_cases': len(all_cases_answers) if all_cases_answers else 0,
+                    'total_answers': 0,
+                    'cases_with_answers': 0
+                }
+                
+                if all_cases_answers:
+                    for case_data in all_cases_answers.values():
+                        answers = None
+                        if hasattr(case_data, 'answers'):
+                            answers = case_data.answers
+                        elif isinstance(case_data, dict) and 'answers' in case_data:
+                            answers = case_data['answers']
+                        
+                        if answers:
+                            stats['cases_with_answers'] += 1
+                            try:
+                                # Contar respuestas
+                                if hasattr(answers, '__len__'):
+                                    stats['total_answers'] += len(answers)
+                                elif hasattr(answers, '__iter__'):
+                                    stats['total_answers'] += len(list(answers))
+                            except:
+                                pass
+                
+                return stats
+            
+            additional_stats = get_additional_stats(all_cases_answers)
+            
+            # ===== RENDERIZAR TEMPLATE CON DATOS PROCESADOS =====
             return render_template(
                 'instructor_comprehensive_result.html',
                 result=result,
@@ -767,7 +864,10 @@ def view_result(result_id: int) -> str:
                 cases=CASES,
                 events=events,
                 total_score=result['score'],
-                paste_penalty=rubric_data.get('paste_penalty', 0)
+                paste_penalty=rubric_data.get('paste_penalty', 0),
+                # Nuevos datos procesados
+                valid_answers_count=valid_answers_count,
+                additional_stats=additional_stats
             )
         else:
             # Individual case (legacy support)
@@ -781,6 +881,9 @@ def view_result(result_id: int) -> str:
             
     except json.JSONDecodeError:
         return "Error: Datos corruptos", 500
+    
+    
+    
 
 
 def flatten_filter(nested_list):

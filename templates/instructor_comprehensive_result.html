@@ -58,7 +58,7 @@
             <div class="summary-card argumentation">
                 <div class="card-icon">✍️</div>
                 <div class="card-content">
-                    <div class="card-value">{{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.argument', 'gt', 3) | list | length) }}/10</div>
+                    <div class="card-value">{{ valid_answers_count | default(0) }}/10</div>
                     <div class="card-label">Argumentaciones Sólidas</div>
                     <div class="card-percentage">{{ ((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.argument', 'gt', 3) | list | length) / 10 * 100) | round(1) }}%</div>
                 </div>
