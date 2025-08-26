@@ -783,9 +783,69 @@ def view_result(result_id: int) -> str:
         return "Error: Datos corruptos", 500
 
 
+def flatten_filter(nested_list):
+    """
+    Aplana una lista anidada
+    Ejemplo: [[1, 2], [3, 4]] -> [1, 2, 3, 4]
+    """
+    if not nested_list:
+        return []
+    
+    result = []
+    for item in nested_list:
+        if isinstance(item, (list, tuple)):
+            result.extend(flatten_filter(item))  # Recursivo para listas anidadas profundas
+        else:
+            result.append(item)
+    return result
+
+# Alternativa más eficiente usando itertools
+def flatten_filter_itertools(nested_list):
+    """
+    Versión más eficiente usando itertools.chain
+    """
+    return list(itertools.chain.from_iterable(nested_list))
+
+# Registrar el filtro en Jinja2
+app.jinja_env.filters['flatten'] = flatten_filter
+
+# O si prefieres la versión con itertools:
+# app.jinja_env.filters['flatten'] = flatten_filter_itertools
+
+# Ejemplo de uso en el template:
+# {{ my_nested_list|flatten }}
+
+# Si necesitas múltiples filtros personalizados:
+def register_custom_filters():
+    """Registra todos los filtros personalizados"""
+    
+    # Filtro flatten
+    app.jinja_env.filters['flatten'] = flatten_filter
+    
+    # Otros filtros útiles
+    def unique_filter(items):
+        """Elimina duplicados manteniendo el orden"""
+        seen = set()
+        result = []
+        for item in items:
+            if item not in seen:
+                seen.add(item)
+                result.append(item)
+        return result
+    
+    def chunk_filter(items, chunk_size):
+        """Divide una lista en chunks de tamaño específico"""
+        return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+    
+    app.jinja_env.filters['unique'] = unique_filter
+    app.jinja_env.filters['chunk'] = chunk_filter
+
+# Llamar la función para registrar todos los filtros
+register_custom_filters()
 ###############################################################################
 # App startup
 ###############################################################################
+
 
 if __name__ == '__main__':
     print("🚀 Iniciando aplicación NFTs y Propiedad Intelectual...")
