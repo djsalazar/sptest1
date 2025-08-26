@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examen Integral - NFTs y Propiedad Intelectual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .exam-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .exam-header h2 {
+            font-size: 2.2em;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .student-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .exam-instructions {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 5px solid #f39c12;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 30px;
+            color: #b7950b;
+            font-weight: 600;
+        }
+
+        .resource-reminder {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 30px;
+            text-align: center;
+        }
+
+        .resource-reminder h4 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .resource-link {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .resource-link:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .case-section {
+            margin: 30px;
+            background: white;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .case-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .case-info {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 25px;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .case-info h3 {
+            color: #2c3e50;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .case-info p {
+            color: #495057;
+            line-height: 1.7;
+            font-size: 1.1em;
+        }
+
+        .question-block {
+            padding: 25px;
+            border: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .question-block:last-child {
+            border-bottom: none;
+        }
+
+        .question-block legend {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            padding: 0 10px;
+            background: white;
+        }
+
+        .question-text {
+            background: linear-gradient(135deg, #f1f3f4 0%, #e8eaf6 100%);
+            border-left: 4px solid #3f51b5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+
+        .bool-inputs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .bool-inputs label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .bool-inputs label:hover {
+            background: linear-gradient(135deg, #e2e6ea 0%, #dae0e5 100%);
+            transform: translateY(-2px);
+        }
+
+        .bool-inputs input[type="radio"]:checked + label,
+        .bool-inputs label:has(input[type="radio"]:checked) {
+            background: linear-gradient(135deg, #3498db 0%, #2ecc71 100%);
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .bool-inputs input[type="radio"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 15px;
+            font-family: inherit;
+            font-size: 1em;
+            line-height: 1.6;
+            resize: vertical;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.1);
+        }
+
+        textarea::placeholder {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .submit-section {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px 50px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.3em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .submit-warning {
+            color: #ecf0f1;
+            font-size: 1.1em;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .nft-indicator {
+            display: inline-block;
+            background: linear-gradient(135deg, #9c27b0 0%, #673ab7 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .legal-reference {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+            color: #e65100;
+        }
+
+        .progress-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        .case-number {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+
+        .institution-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .institution-logo {
+            max-height: 60px;
+            filter: brightness(0) invert(1);
+        }
+
+        .institution-info {
+            text-align: left;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+
+            .case-section, .exam-instructions, .resource-reminder {
+                margin: 15px;
+            }
+
+            .bool-inputs {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .bool-inputs label {
+                justify-content: center;
+            }
+
+            .institution-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .institution-info {
+                text-align: center;
+            }
+        }
+
+        /* Animación de carga */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .case-section {
+            animation: fadeIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-indicator" id="progress-bar"></div>
+    
+    <div class="container">
+        <div class="exam-header">
+            <div class="institution-header">
+                <img src="legaltech.com.gt/themeoj/img/logoBlanco.png" alt="Organismo Judicial de Guatemala" class="institution-logo">
+                <div class="institution-info">
+                    <h2>Examen Integral - NFTs y Propiedad Intelectual</h2>
+                    <p><strong>Organismo Judicial de Guatemala</strong></p>
+                </div>
+            </div>
+            
+            <div class="student-info">
+                <p><strong>Participante:</strong> {{ student_name }} | <strong>Identificación:</strong> {{ student_carne }}</p>
+                <p><strong>Fecha:</strong> <span id="exam-date"></span> | <strong>Hora de inicio:</strong> <span id="start-time"></span></p>
+            </div>
+        </div>
+
+        <div class="resource-reminder">
+            <h4>📚 Documento de Referencia Obligatorio</h4>
+            <p>Asegúrese de haber leído el documento base antes de continuar:</p>
+            <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" target="_blank" class="resource-link">
+                📄 NFTs: Estudio sobre Propiedad Intelectual - Universidad de Chile
+            </a>
+        </div>
+
+        <div class="exam-instructions">
+            <strong>📋 INSTRUCCIONES:</strong> Complete todos los 5 casos sobre NFTs y propiedad intelectual. Cada caso presenta 2 afirmaciones que debe evaluar como Verdadero/Falso, proporcionando justificación jurídica detallada basada en la legislación guatemalteca y los principios estudiados en el documento de referencia.
+        </div>
+
+        <form method="post" action="{{ url_for('submit_comprehensive') }}" id="comprehensive-exam-form">
+            {% for case_data in all_cases_data %}
+            <section class="case-section" data-case="{{ case_data.case.case_id }}">
+                <div class="case-info">
+                    <h3>
+                        <div class="case-number">{{ case_data.case.case_id }}</div>
+                        {{ case_data.case.title }}
+                        <span class="nft-indicator">NFT</span>
+                    </h3>
+                    <p>{{ case_data.case.description }}</p>
+                    
+                    <div class="legal-reference">
+                        <strong>⚖️ Marco Legal de Referencia:</strong> 
+                        {% if case_data.case.case_id == 1 %}
+                        Arts. 3, 13 Ley de Propiedad Intelectual Guatemala
+                        {% elif case_data.case.case_id == 2 %}
+                        Ley de Firma Electrónica Avanzada Guatemala, Autonomía de la voluntad
+                        {% elif case_data.case.case_id == 3 %}
+                        Art. 9 LPI, Derechos morales y patrimoniales
+                        {% elif case_data.case.case_id == 4 %}
+                        Arts. 16, 17 LPI - Comunicación pública
+                        {% elif case_data.case.case_id == 5 %}
+                        Arts. 71, 42 Constitución de Guatemala, Principio de legalidad
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% for question in case_data.questions %}
+                <fieldset class="question-block" data-question-index="case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
+                    <legend>Caso {{ case_data.case.case_id }} - Afirmación {{ loop.index }}:</legend>
+                    
+                    <div class="question-text">{{ question }}</div>
+                    
+                    <div class="bool-inputs">
+                        <label>
+                            <input type="radio" name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" value="true" required>
+                            ✓ Verdadero
+                        </label>
+                        <label>
+                            <input type="radio" name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" value="false" required>
+                            ✗ Falso
+                        </label>
+                    </div>
+                    
+                    <label for="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}">
+                        <strong>Justificación Jurídica:</strong> <small>(Debe mencionar artículos específicos y principios jurídicos)</small>
+                    </label>
+                    <textarea id="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
+                              name="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
+                              rows="5" required 
+                              placeholder="Proporcione una justificación jurídica detallada citando artículos específicos de la Ley de Propiedad Intelectual de Guatemala, principios doctrinales sobre NFTs y el análisis del documento de referencia de la Universidad de Chile. Explique la diferencia entre soporte digital y obra intelectual, y cómo se aplica al caso concreto..."></textarea>
+                </fieldset>
+                {% endfor %}
+            </section>
+            {% endfor %}
+            
+            <div class="submit-section">
+                <button type="submit" class="btn-submit" id="submit-btn">
+                    🚀 Enviar Examen Completo
+                </button>
+                <p class="submit-warning">
+                    ⚠️ <strong>IMPORTANTE:</strong> Verifique que todas las respuestas estén completas antes de enviar. 
+                    El sistema evaluará automáticamente su comprensión de NFTs, smart contracts, y aplicación 
+                    de la legislación guatemalteca. No podrá modificar sus respuestas después del envío.
+                </p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Configuración inicial
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar fecha y hora
+            const now = new Date();
+            document.getElementById('exam-date').textContent = now.toLocaleDateString('es-GT');
+            document.getElementById('start-time').textContent = now.toLocaleTimeString('es-GT');
+            
+            // Inicializar barra de progreso
+            updateProgressBar();
+        });
+
+        // Control de progreso
+        function updateProgressBar() {
+            const totalQuestions = document.querySelectorAll('textarea').length;
+            const answeredQuestions = Array.from(document.querySelectorAll('textarea'))
+                .filter(textarea => textarea.value.trim().length > 10).length;
+            
+            const progress = (answeredQuestions / totalQuestions) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }
+
+        // Monitorear cambios en respuestas
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                updateProgressBar();
+                
+                // Advertencia sobre respuestas muy cortas
+                if (this.value.length > 0 && this.value.length < 50) {
+                    this.style.borderColor = '#f39c12';
+                } else if (this.value.length >= 50) {
+                    this.style.borderColor = '#27ae60';
+                } else {
+                    this.style.borderColor = '#dee2e6';
+                }
+            });
+        });
+
+        // Validación antes del envío
+        document.getElementById('comprehensive-exam-form').addEventListener('submit', function(e) {
+            const textareas = document.querySelectorAll('textarea');
+            const radios = document.querySelectorAll('input[type="radio"]:checked');
+            
+            // Verificar que todos los campos estén completados
+            let incompleteAnswers = [];
+            
+            textareas.forEach((textarea, index) => {
+                if (textarea.value.trim().length < 20) {
+                    incompleteAnswers.push(`Pregunta ${Math.floor(index/2) + 1}.${(index % 2) + 1}`);
+                }
+            });
+            
+            if (radios.length < 10) {
+                alert('⚠️ Debe seleccionar Verdadero o Falso para todas las afirmaciones.');
+                e.preventDefault();
+                return;
+            }
+            
+            if (incompleteAnswers.length > 0) {
+                alert(`⚠️ Las siguientes respuestas necesitan más desarrollo:\n${incompleteAnswers.join(', ')}\n\nPor favor proporcione justificaciones más detalladas (mínimo 20 caracteres por respuesta).`);
+                e.preventDefault();
+                return;
+            }
+            
+            // Confirmación final
+            if (!confirm('🎓 ¿Está seguro de que desea enviar su examen?\n\nUna vez enviado no podrá realizar cambios.\n\nEl sistema analizará automáticamente sus respuestas sobre NFTs y propiedad intelectual.')) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Deshabilitar botón para evitar doble envío
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').textContent = '⏳ Enviando...';
+        });
+
+        // Auto-guardado local (opcional)
+        function autoSave() {
+            const formData = new FormData(document.getElementById('comprehensive-exam-form'));
+            const data = Object.fromEntries(formData.entries());
+            localStorage.setItem('nft_exam_progress', JSON.stringify(data));
+        }
+
+        // Guardar progreso cada 30 segundos
+        setInterval(autoSave, 30000);
+
+        // Recuperar progreso si existe
+        window.addEventListener('load', function() {
+            const savedProgress = localStorage.getItem('nft_exam_progress');
+            if (savedProgress) {
+                const data = JSON.parse(savedProgress);
+                Object.keys(data).forEach(key => {
+                    const element = document.querySelector(`[name="${key}"]`);
+                    if (element) {
+                        if (element.type === 'radio') {
+                            if (element.value === data[key]) {
+                                element.checked = true;
+                            }
+                        } else {
+                            element.value = data[key];
+                        }
+                    }
+                });
+                updateProgressBar();
+            }
+        });
+
+        // Limpiar progreso después del envío exitoso
+        window.addEventListener('beforeunload', function() {
+            if (document.getElementById('submit-btn').disabled) {
+                localStorage.removeItem('nft_exam_progress');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,228 +1,740 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="student-form-container">
-    <div class="form-card">
-        <h2>Registro de Estudiante</h2>
-        <p class="form-description">
-            Por favor complete sus datos para iniciar el examen integral de Conocimientos Tradicionales y Propiedad Intelectual.
-            <br><strong>El examen incluye 5 casos con 2 preguntas cada uno (10 preguntas total).</strong>
-        </p>
-        
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <div class="alert alert-warning">
-            {% for message in messages %}
-                <p>{{ message }}</p>
-            {% endfor %}
+<div class="student-form-container">
+    <div class="form-wrapper">
+        <!-- Institution Header -->
+        <div class="institution-header">
+            <img src="legaltech.com.gt/themeoj/img/logoBlanco.png" 
+                 alt="Organismo Judicial de Guatemala" 
+                 class="institution-logo">
+            <div class="institution-info">
+                <h1>Organismo Judicial de Guatemala</h1>
+                <p class="institution-tagline">Sistema de Evaluación Integral</p>
+            </div>
         </div>
-        {% endif %}
-        {% endwith %}
-        
-        <!-- Loading spinner (oculto inicialmente) -->
-        <div id="loading-spinner" class="loading-container" style="display: none;">
-            <div class="spinner"></div>
-            <div class="loading-text">
-                <h3>🤖 Preparando Examen con IA</h3>
-                <p>Generando preguntas personalizadas...</p>
-                <p><small>⏱️ Esto puede tomar 30-60 segundos</small></p>
-                <div class="loading-progress">
-                    <div class="progress-bar"></div>
+
+        <!-- Main Form Card -->
+        <div class="form-card">
+            <div class="form-header">
+                <h2>🎓 Registro de Participante</h2>
+                <p class="form-description">
+                    Complete sus datos para acceder al <strong>Examen Integral sobre NFTs y Propiedad Intelectual</strong>.
+                    <br>El examen incluye <strong>5 casos de estudio</strong> con <strong>2 preguntas cada uno</strong> (10 preguntas total).
+                </p>
+            </div>
+
+            <!-- NFT Topic Highlight -->
+            <div class="nft-highlight">
+                <div class="nft-icon">🔗</div>
+                <div class="nft-content">
+                    <h3>Examen: NFTs y Propiedad Intelectual</h3>
+                    <p>Evaluación especializada sobre tokens no fungibles, smart contracts, derechos de autor y marco jurídico guatemalteco.</p>
+                </div>
+            </div>
+
+            <!-- Resource Reminder -->
+            <div class="resource-reminder">
+                <h4>📚 LECTURA OBLIGATORIA PREVIA</h4>
+                <p>Debe leer el documento de referencia antes de continuar:</p>
+                <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" 
+                   target="_blank" 
+                   class="resource-link">
+                    📄 "NFTs: Un estudio sobre el alcance de la propiedad intelectual en los tokens no fungibles"
+                </a>
+                <p class="resource-author">Universidad de Chile - Facultad de Derecho</p>
+                <div class="resource-warning">
+                    <strong>⚠️ IMPORTANTE:</strong> Sin esta lectura previa será difícil responder correctamente las preguntas del examen.
+                </div>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                <div class="alert alert-warning" role="alert">
+                    <span class="alert-icon">⚠️</span>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Main Form -->
+            <form method="post" action="{{ url_for('start_exam') }}" class="registration-form" id="exam-form" novalidate>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="student_name" class="required-label">
+                            <span class="label-icon">👤</span>
+                            Nombre Completo:
+                        </label>
+                        <input type="text" 
+                               id="student_name" 
+                               name="student_name" 
+                               required 
+                               placeholder="Ingrese su nombre completo"
+                               maxlength="100"
+                               autocomplete="name"
+                               class="form-input">
+                        <div class="input-help">Ejemplo: Juan Carlos Pérez López</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="student_carne" class="required-label">
+                            <span class="label-icon">🆔</span>
+                            Número de Identificación / Carné:
+                        </label>
+                        <input type="text" 
+                               id="student_carne" 
+                               name="student_carne" 
+                               required 
+                               placeholder="DPI, carné o código de identificación"
+                               maxlength="20"
+                               autocomplete="off"
+                               class="form-input">
+                        <div class="input-help">DPI, carné universitario o código asignado</div>
+                    </div>
+                </div>
+
+                <!-- Confirmation Checkboxes -->
+                <div class="confirmation-section">
+                    <h4>📋 Confirmación de Lectura</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="confirm-reading" required>
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">
+                                ✅ <strong>Confirmo que he leído</strong> el documento completo sobre NFTs de la Universidad de Chile
+                            </span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="confirm-understanding" required>
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">
+                                ✅ <strong>Entiendo</strong> que el examen evalúa conceptos sobre tokens no fungibles, smart contracts y legislación guatemalteca
+                            </span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="confirm-honesty" required>
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">
+                                ✅ <strong>Me comprometo</strong> a responder con honestidad académica, sin usar IA ni copiar contenido externo
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group submit-group">
+                    <button type="submit" class="btn btn-primary btn-start" id="start-btn" disabled>
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-text">Iniciar Examen sobre NFTs</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Exam Information -->
+            <div class="exam-info">
+                <h3>📊 Información del Examen</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-icon">📋</div>
+                        <div class="info-content">
+                            <strong>5 casos</strong>
+                            <span>de estudio NFT</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">❓</div>
+                        <div class="info-content">
+                            <strong>2 preguntas</strong>
+                            <span>por caso (10 total)</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">⚖️</div>
+                        <div class="info-content">
+                            <strong>V/F + Justificación</strong>
+                            <span>jurídica obligatoria</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">🤖</div>
+                        <div class="info-content">
+                            <strong>Análisis por IA</strong>
+                            <span>9 criterios especializados</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Preview -->
+                <div class="case-preview">
+                    <h4>🔍 Vista Previa de Casos</h4>
+                    <div class="cases-grid">
+                        <div class="case-item">
+                            <span class="case-number">1</span>
+                            <span class="case-title">NFT como Título Traslativo</span>
+                        </div>
+                        <div class="case-item">
+                            <span class="case-number">2</span>
+                            <span class="case-title">Smart Contracts y Regalías</span>
+                        </div>
+                        <div class="case-item">
+                            <span class="case-number">3</span>
+                            <span class="case-title">Tokenización Sin Autorización</span>
+                        </div>
+                        <div class="case-item">
+                            <span class="case-number">4</span>
+                            <span class="case-title">Uso Público NFT Musical</span>
+                        </div>
+                        <div class="case-item">
+                            <span class="case-number">5</span>
+                            <span class="case-title">Derechos Constitucionales</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Note -->
+                <div class="performance-note">
+                    <h4>⚡ Tecnología de Evaluación</h4>
+                    <p>
+                        Sistema con inteligencia artificial especializada en NFTs que evalúa 
+                        <strong>comprensión conceptual</strong>, <strong>aplicación normativa</strong> 
+                        y <strong>análisis de casos prácticos</strong>. 
+                        Detección automática de respuestas generadas por IA.
+                    </p>
                 </div>
             </div>
         </div>
-        
-        <form method="post" action="{{ url_for('start_exam') }}" class="student-form" id="exam-form">
-            <div class="form-group">
-                <label for="student_name">Nombre Completo:</label>
-                <input type="text" id="student_name" name="student_name" required 
-                       placeholder="Ingrese su nombre completo" maxlength="100">
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-spinner" class="loading-overlay" style="display: none;">
+    <div class="loading-content">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <div class="spinner-ring"></div>
+        </div>
+        <div class="loading-text">
+            <h3>🤖 Preparando Examen con IA</h3>
+            <p>Generando casos de NFTs personalizados...</p>
+            <div class="loading-steps">
+                <div class="step active">⏳ Cargando casos jurídicos...</div>
+                <div class="step">🔗 Configurando evaluación NFT...</div>
+                <div class="step">🤖 Inicializando IA...</div>
+                <div class="step">✅ Listo para comenzar</div>
             </div>
-            
-            <div class="form-group">
-                <label for="student_carne">Número de Carné:</label>
-                <input type="text" id="student_carne" name="student_carne" required 
-                       placeholder="Ingrese su número de carné" maxlength="20">
-            </div>
-            
-            <div class="form-group">
-                <button type="submit" class="btn-primary" id="start-btn">Iniciar Examen</button>
-            </div>
-        </form>
-        
-        <div class="exam-info">
-            <h3>Información del Examen:</h3>
-            <ul>
-                <li><strong>5 casos</strong> de estudio</li>
-                <li><strong>2 preguntas</strong> por caso (10 total)</li>
-                <li><strong>Verdadero/Falso</strong> con justificación obligatoria</li>
-                <li><strong>Análisis por IA</strong> con rúbrica de 9 criterios</li>
-                <li><strong>Anti-trampa:</strong> Se detecta copy-paste y uso de IA</li>
-            </ul>
-            
-            <div class="performance-note">
-                <h4>⚡ Nota sobre Rendimiento:</h4>
-                <p>El sistema usa inteligencia artificial para personalizar las preguntas y evaluar respuestas. 
-                La preparación inicial puede tomar <strong>30-60 segundos</strong>. 
-                Por favor, <strong>sea paciente</strong> y no haga clic múltiples veces.</p>
-            </div>
+            <p class="loading-patience"><small>⏱️ Esto puede tomar 30-60 segundos. Por favor, sea paciente.</small></p>
         </div>
     </div>
-</section>
+</div>
 
 <style>
 .student-form-container {
+    min-height: calc(100vh - 200px);
+    padding: 2rem 1rem;
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: 70vh;
-    padding: 2rem 0;
 }
 
-.form-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    max-width: 500px;
+.form-wrapper {
+    max-width: 800px;
     width: 100%;
 }
 
-.form-card h2 {
-    color: #1e3a5f;
+/* Institution Header */
+.institution-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.institution-logo {
+    height: 80px;
+    filter: brightness(0) invert(1);
+}
+
+.institution-info h1 {
+    font-size: 1.8rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--white);
+}
+
+.institution-tagline {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+/* Main Form Card */
+.form-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid #e1e8ed;
+    overflow: hidden;
+}
+
+.form-header {
+    padding: 2rem;
     text-align: center;
-    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.form-header h2 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+    font-size: 2rem;
 }
 
 .form-description {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #666;
+    margin: 0;
+    color: #555;
+    font-size: 1.1rem;
     line-height: 1.6;
+}
+
+/* NFT Highlight */
+.nft-highlight {
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+    border-left: 5px solid #9c27b0;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.nft-icon {
+    font-size: 4rem;
+    opacity: 0.8;
+}
+
+.nft-content h3 {
+    margin: 0 0 0.5rem 0;
+    color: #7b1fa2;
+    font-size: 1.5rem;
+}
+
+.nft-content p {
+    margin: 0;
+    color: #4a148c;
+    font-size: 1.1rem;
+}
+
+/* Resource Reminder */
+.resource-reminder {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 5px solid var(--warning-color);
+    padding: 2rem;
+    text-align: center;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.resource-reminder h4 {
+    margin: 0 0 1rem 0;
+    color: #b7950b;
+    font-size: 1.3rem;
+}
+
+.resource-link {
+    display: inline-block;
+    background: var(--warning-color);
+    color: var(--white);
+    padding: 1rem 2rem;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    margin: 1rem 0;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+.resource-link:hover {
+    background: #e67e22;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+}
+
+.resource-author {
+    margin: 0.5rem 0;
+    font-style: italic;
+    color: #856404;
+}
+
+.resource-warning {
+    background: rgba(231, 76, 60, 0.1);
+    border: 2px solid #e74c3c;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-top: 1rem;
+    color: #c0392b;
+    font-weight: 500;
+}
+
+/* Flash Messages */
+.flash-messages {
+    padding: 0 2rem;
+    margin-bottom: 2rem;
+}
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    border: 2px solid var(--warning-color);
+    color: #856404;
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+}
+
+/* Registration Form */
+.registration-form {
+    padding: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
 }
 
 .form-group {
     margin-bottom: 1.5rem;
 }
 
-.form-group label {
-    display: block;
+.required-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     margin-bottom: 0.5rem;
-    font-weight: bold;
-    color: #1e3a5f;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-    transition: border-color 0.3s;
-}
-
-.form-group input:focus {
-    outline: none;
-    border-color: #1e3a5f;
-}
-
-.btn-primary {
-    width: 100%;
-    background-color: #1e3a5f;
-    color: white;
-    padding: 1rem;
-    border: none;
-    border-radius: 5px;
+    font-weight: 600;
+    color: var(--primary-color);
     font-size: 1.1rem;
+}
+
+.label-icon {
+    font-size: 1.2rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e1e8ed;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+    background: var(--white);
+    font-family: inherit;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.form-input.error {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.input-help {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--dark-gray);
+    font-style: italic;
+}
+
+/* Confirmation Section */
+.confirmation-section {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    border-left: 5px solid var(--success-color);
+}
+
+.confirmation-section h4 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
     cursor: pointer;
-    transition: all 0.3s;
-}
-
-.btn-primary:hover {
-    background-color: #0f2744;
-}
-
-.btn-primary:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-.alert {
     padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: 5px;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    border: 2px solid transparent;
 }
 
-.alert-warning {
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    color: #856404;
+.checkbox-label:hover {
+    background: #e9ecef;
+    border-color: var(--secondary-color);
 }
 
-.exam-info {
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: var(--transition);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--white);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.checkbox-text {
+    flex: 1;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Submit Button */
+.submit-group {
+    text-align: center;
     margin-top: 2rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-    border-radius: 5px;
-    border-left: 4px solid #1e3a5f;
+}
+
+.btn-start {
+    padding: 1.25rem 3rem;
+    font-size: 1.2rem;
+    border-radius: 25px;
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    min-width: 280px;
+}
+
+.btn-start:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+}
+
+.btn-start:disabled {
+    background: #ddd;
+    color: #999;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-icon {
+    font-size: 1.3rem;
+}
+
+/* Exam Info */
+.exam-info {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-top: 1px solid #e1e8ed;
 }
 
 .exam-info h3 {
-    color: #1e3a5f;
-    margin-bottom: 1rem;
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+    text-align: center;
 }
 
-.exam-info ul {
-    margin: 0;
-    padding-left: 1.5rem;
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
 }
 
-.exam-info li {
-    margin-bottom: 0.5rem;
-}
-
-.performance-note {
-    margin-top: 1rem;
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     padding: 1rem;
-    background-color: #e7f3ff;
-    border-left: 4px solid #0066cc;
-    border-radius: 0 4px 4px 0;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.info-icon {
+    font-size: 2rem;
+    opacity: 0.7;
+}
+
+.info-content strong {
+    display: block;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.info-content span {
+    color: var(--dark-gray);
+    font-size: 0.9rem;
+}
+
+/* Case Preview */
+.case-preview {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+}
+
+.case-preview h4 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.cases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.case-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--secondary-color);
+}
+
+.case-number {
+    background: var(--secondary-color);
+    color: var(--white);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.case-title {
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+/* Performance Note */
+.performance-note {
+    background: linear-gradient(135deg, #e7f3ff 0%, #d1ecf1 100%);
+    border-left: 5px solid #17a2b8;
+    padding: 1.5rem;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
 .performance-note h4 {
-    margin: 0 0 0.5rem 0;
-    color: #0066cc;
+    margin: 0 0 1rem 0;
+    color: #117a8b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .performance-note p {
     margin: 0;
-    font-size: 0.9rem;
+    color: #0c5460;
+    line-height: 1.6;
 }
 
-/* Loading Spinner */
-.loading-container {
+/* Loading Overlay */
+.loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(30, 58, 95, 0.95);
-    z-index: 9999;
+    background: rgba(44, 62, 80, 0.95);
+    z-index: 10000;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    color: white;
+}
+
+.loading-content {
     text-align: center;
+    color: var(--white);
+    max-width: 500px;
+    padding: 2rem;
+}
+
+.spinner-container {
+    position: relative;
+    margin: 0 auto 2rem;
+    width: 80px;
+    height: 80px;
 }
 
 .spinner {
-    border: 4px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    border-top: 4px solid #fff;
     width: 60px;
     height: 60px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid var(--white);
+    border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 2rem;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.spinner-ring {
+    width: 80px;
+    height: 80px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes spin {
@@ -230,35 +742,142 @@
     100% { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+    0%, 100% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6;
+        transform: scale(1.1);
+    }
+}
+
 .loading-text h3 {
     margin: 0 0 1rem 0;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+    color: var(--white);
 }
 
 .loading-text p {
     margin: 0.5rem 0;
     opacity: 0.9;
+    font-size: 1.1rem;
 }
 
-.loading-progress {
-    width: 300px;
-    height: 6px;
-    background-color: rgba(255,255,255,0.3);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 1rem;
+.loading-steps {
+    margin: 2rem 0;
+    text-align: left;
 }
 
-.progress-bar {
-    height: 100%;
-    background-color: #ffd700;
-    width: 0%;
-    animation: progress 60s linear infinite;
+.step {
+    padding: 0.5rem 0;
+    opacity: 0.5;
+    transition: all 0.5s ease;
 }
 
-@keyframes progress {
-    0% { width: 0%; }
-    100% { width: 100%; }
+.step.active {
+    opacity: 1;
+    color: #3498db;
+    font-weight: 500;
+}
+
+.step.completed {
+    opacity: 1;
+    color: #27ae60;
+}
+
+.loading-patience {
+    margin-top: 2rem;
+    opacity: 0.8;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .student-form-container {
+        padding: 1rem;
+    }
+    
+    .institution-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .institution-info h1 {
+        font-size: 1.5rem;
+    }
+    
+    .form-header {
+        padding: 1.5rem;
+    }
+    
+    .form-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .nft-highlight {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .resource-reminder {
+        padding: 1.5rem;
+    }
+    
+    .registration-form {
+        padding: 1.5rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cases-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-start {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .institution-logo {
+        height: 60px;
+    }
+    
+    .form-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .form-description {
+        font-size: 1rem;
+    }
+    
+    .checkbox-label {
+        padding: 0.75rem;
+    }
+    
+    .loading-content {
+        padding: 1rem;
+    }
+    
+    .loading-text h3 {
+        font-size: 1.5rem;
+    }
 }
 </style>
 
@@ -267,25 +886,218 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('exam-form');
     const startBtn = document.getElementById('start-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const inputs = document.querySelectorAll('.form-input');
     
+    // Enable/disable submit button based on form completion
+    function checkFormCompletion() {
+        const nameInput = document.getElementById('student_name');
+        const carneInput = document.getElementById('student_carne');
+        const allCheckboxes = Array.from(checkboxes);
+        
+        const nameValid = nameInput.value.trim().length >= 2;
+        const carneValid = carneInput.value.trim().length >= 3;
+        const allChecked = allCheckboxes.every(cb => cb.checked);
+        
+        startBtn.disabled = !(nameValid && carneValid && allChecked);
+        
+        // Visual feedback
+        if (nameValid && carneValid && allChecked) {
+            startBtn.classList.add('ready');
+        } else {
+            startBtn.classList.remove('ready');
+        }
+    }
+    
+    // Add event listeners
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', checkFormCompletion);
+    });
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', checkFormCompletion);
+        input.addEventListener('blur', validateInput);
+    });
+    
+    // Input validation
+    function validateInput(e) {
+        const input = e.target;
+        const value = input.value.trim();
+        
+        input.classList.remove('error');
+        
+        if (input.id === 'student_name') {
+            if (value.length < 2) {
+                input.classList.add('error');
+            } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) {
+                input.classList.add('error');
+            }
+        } else if (input.id === 'student_carne') {
+            if (value.length < 3) {
+                input.classList.add('error');
+            }
+        }
+    }
+    
+    // Form submission
     form.addEventListener('submit', function(e) {
-        // Validar campos
+        e.preventDefault();
+        
+        // Final validation
         const name = document.getElementById('student_name').value.trim();
         const carne = document.getElementById('student_carne').value.trim();
         
         if (!name || !carne) {
-            alert('Por favor complete todos los campos');
+            alert('⚠️ Por favor complete todos los campos obligatorios');
             return false;
         }
         
-        // Mostrar loading y deshabilitar botón
-        startBtn.disabled = true;
-        startBtn.textContent = 'Preparando...';
-        loadingSpinner.style.display = 'flex';
+        if (name.length < 2 || !/^[a-zA-ZÀ-ÿ\s]+$/.test(name)) {
+            alert('⚠️ El nombre debe contener al menos 2 caracteres y solo letras');
+            return false;
+        }
         
-        // Permitir envío del formulario
-        return true;
+        if (carne.length < 3) {
+            alert('⚠️ La identificación debe tener al menos 3 caracteres');
+            return false;
+        }
+        
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        if (!allChecked) {
+            alert('⚠️ Debe confirmar todos los puntos de la lista de verificación');
+            return false;
+        }
+        
+        // Show loading and submit
+        showLoadingScreen();
+        
+        // Submit form after short delay to show loading
+        setTimeout(() => {
+            this.submit();
+        }, 500);
+        
+        return false;
     });
+    
+    function showLoadingScreen() {
+        loadingSpinner.style.display = 'flex';
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Preparando...</span>';
+        
+        // Animate loading steps
+        const steps = loadingSpinner.querySelectorAll('.step');
+        let currentStep = 0;
+        
+        const stepInterval = setInterval(() => {
+            if (currentStep < steps.length) {
+                if (currentStep > 0) {
+                    steps[currentStep - 1].classList.remove('active');
+                    steps[currentStep - 1].classList.add('completed');
+                }
+                steps[currentStep].classList.add('active');
+                currentStep++;
+            } else {
+                clearInterval(stepInterval);
+            }
+        }, 1000);
+    }
+    
+    // Initial check
+    checkFormCompletion();
+    
+    // Add reminder about document reading
+    setTimeout(() => {
+        if (!localStorage.getItem('nft_document_reminded_new')) {
+            const reminder = document.createElement('div');
+            reminder.className = 'floating-reminder';
+            reminder.innerHTML = `
+                <div class="reminder-content">
+                    <span class="reminder-icon">📖</span>
+                    <span class="reminder-text">Recuerde leer el documento sobre NFTs antes de continuar</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="reminder-close">&times;</button>
+                </div>
+            `;
+            document.body.appendChild(reminder);
+            
+            // Auto remove after 10 seconds
+            setTimeout(() => {
+                if (reminder.parentElement) {
+                    reminder.remove();
+                }
+            }, 10000);
+            
+            localStorage.setItem('nft_document_reminded_new', 'true');
+        }
+    }, 3000);
 });
+
+// Additional styles for dynamic elements
+const additionalCSS = `
+.btn-start.ready {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+    animation: readyPulse 2s ease-in-out infinite;
+}
+
+@keyframes readyPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.floating-reminder {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--warning-color);
+    color: var(--white);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    z-index: 1000;
+    max-width: 300px;
+    animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.reminder-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.reminder-close {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+}
+
+@media (max-width: 768px) {
+    .floating-reminder {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        max-width: none;
+    }
+}
+`;
+
+// Inject additional CSS
+const style = document.createElement('style');
+style.textContent = additionalCSS;
+document.head.appendChild(style);
 </script>
 {% endblock %}

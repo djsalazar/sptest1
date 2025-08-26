@@ -1,152 +1,827 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="dashboard-container">
-    <h2>Panel de Resultados - Instructor</h2>
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <h3>{{ results|length }}</h3>
-            <p>Exámenes Completados</p>
+<div class="dashboard-container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <h2>📊 Panel de Resultados - NFTs y Propiedad Intelectual</h2>
+            <p class="header-subtitle">Organismo Judicial de Guatemala - Sistema de Evaluación Integral</p>
         </div>
-        <div class="stat-card">
-            <h3>{{ '%.1f'|format(average_score) }}</h3>
-            <p>Promedio General</p>
+        <div class="header-actions">
+            <a href="{{ url_for('logout') }}" class="btn btn-danger btn-logout">
+                🚪 Cerrar Sesión
+            </a>
         </div>
     </div>
-    
-    <table class="result-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Fecha y Hora</th>
-                <th>Estudiante</th>
-                <th>Carné</th>
-                <th>Puntaje</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in results %}
-            <tr>
-                <td>{{ row.id }}</td>
-                <td>{{ row.timestamp[:16] }}</td>
-                <td>
-                    {% if ' - ' in row.student_id %}
-                        {{ row.student_id.split(' - ')[1] }}
+
+    <!-- Statistics Cards -->
+    <div class="dashboard-stats">
+        <div class="stat-card total-exams">
+            <div class="stat-icon">📝</div>
+            <div class="stat-content">
+                <h3>{{ results|length }}</h3>
+                <p>Exámenes Completados</p>
+                <small>Evaluaciones integrales sobre NFTs</small>
+            </div>
+        </div>
+        
+        <div class="stat-card average-score">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <h3>{{ '%.1f'|format(average_score) }}/100</h3>
+                <p>Promedio General</p>
+                <small>
+                    {% if average_score >= 80 %}
+                    Rendimiento excelente
+                    {% elif average_score >= 60 %}
+                    Rendimiento bueno
                     {% else %}
-                        {{ row.student_id }}
+                    Área de mejora
                     {% endif %}
-                </td>
-                <td>
-                    {% if ' - ' in row.student_id %}
-                        {{ row.student_id.split(' - ')[0] }}
-                    {% else %}
-                        Sin carné
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="score-badge {{ 'score-high' if row.score >= 80 else 'score-medium' if row.score >= 60 else 'score-low' }}">
-                        {{ '%.1f'|format(row.score) }}
-                    </span>
-                </td>
-                <td>
-                    {% if row.case_id == 0 %}
-                        <span class="badge-complete">Examen Integral</span>
-                    {% else %}
-                        <span class="badge-partial">Caso Individual</span>
-                    {% endif %}
-                </td>
-                <td><a href="{{ url_for('view_result', result_id=row.id) }}" class="btn-view">Ver Detalle</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</section>
-<p><a href="{{ url_for('logout') }}" class="btn-logout">Cerrar Sesión</a></p>
+                </small>
+            </div>
+        </div>
+        
+        <div class="stat-card completion-rate">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h3>{{ (results|selectattr('case_id', 'equalto', 0)|list|length / results|length * 100)|round(1) if results|length > 0 else 0 }}%</h3>
+                <p>Tasa de Finalización</p>
+                <small>Exámenes integrales vs individuales</small>
+            </div>
+        </div>
+        
+        <div class="stat-card nft-performance">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-content">
+                <h3>5</h3>
+                <p>Casos NFT Activos</p>
+                <small>Smart contracts, tokenización, derechos</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Filters -->
+    <div class="filter-section">
+        <h3>🔍 Filtros Rápidos</h3>
+        <div class="filter-buttons">
+            <button class="filter-btn active" onclick="filterResults('all')">
+                📊 Todos ({{ results|length }})
+            </button>
+            <button class="filter-btn" onclick="filterResults('comprehensive')">
+                📋 Integrales ({{ results|selectattr('case_id', 'equalto', 0)|list|length }})
+            </button>
+            <button class="filter-btn" onclick="filterResults('high-score')">
+                🌟 Altos ({{ results|selectattr('score', 'gt', 80)|list|length }})
+            </button>
+            <button class="filter-btn" onclick="filterResults('recent')">
+                🕐 Recientes ({{ results[:10]|length }})
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="results-section">
+        <div class="section-header">
+            <h3>📋 Resultados Detallados</h3>
+            <div class="table-actions">
+                <button onclick="exportResults()" class="btn btn-secondary">
+                    📤 Exportar CSV
+                </button>
+                <button onclick="refreshData()" class="btn btn-primary">
+                    🔄 Actualizar
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="results-table" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">
+                            ID <span class="sort-arrow">↕️</span>
+                        </th>
+                        <th onclick="sortTable(1)">
+                            Fecha y Hora <span class="sort-arrow">↕️</span>
+                        </th>
+                        <th onclick="sortTable(2)">
+                            Estudiante <span class="sort-arrow">↕️</span>
+                        </th>
+                        <th onclick="sortTable(3)">
+                            Carné/ID <span class="sort-arrow">↕️</span>
+                        </th>
+                        <th onclick="sortTable(4)">
+                            Puntaje <span class="sort-arrow">↕️</span>
+                        </th>
+                        <th>Tipo de Examen</th>
+                        <th>Análisis NFT</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results %}
+                    <tr class="result-row" 
+                        data-score="{{ row.score }}" 
+                        data-type="{{ 'comprehensive' if row.case_id == 0 else 'individual' }}"
+                        data-date="{{ row.timestamp }}">
+                        <td class="id-cell">
+                            <span class="id-badge">#{{ row.id }}</span>
+                        </td>
+                        <td class="date-cell">
+                            <div class="date-display">
+                                <strong>{{ row.timestamp[:10] }}</strong><br>
+                                <small>{{ row.timestamp[11:16] }}</small>
+                            </div>
+                        </td>
+                        <td class="student-cell">
+                            <div class="student-info">
+                                {% if ' - ' in row.student_id %}
+                                <strong>{{ row.student_id.split(' - ')[1] }}</strong>
+                                {% else %}
+                                <strong>{{ row.student_id }}</strong>
+                                {% endif %}
+                                <br>
+                                <small class="text-muted">
+                                    {% if row.case_id == 0 %}
+                                    Examen Integral
+                                    {% else %}
+                                    Caso {{ row.case_id }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </td>
+                        <td class="carne-cell">
+                            {% if ' - ' in row.student_id %}
+                                <span class="carne-badge">{{ row.student_id.split(' - ')[0] }}</span>
+                            {% else %}
+                                <span class="carne-badge unknown">Sin ID</span>
+                            {% endif %}
+                        </td>
+                        <td class="score-cell">
+                            <div class="score-display">
+                                <span class="score-badge {{ 'score-high' if row.score >= 80 else 'score-medium' if row.score >= 60 else 'score-low' }}">
+                                    {{ '%.1f'|format(row.score) }}
+                                </span>
+                                <br>
+                                <small>/100 pts</small>
+                            </div>
+                        </td>
+                        <td class="type-cell">
+                            {% if row.case_id == 0 %}
+                                <span class="exam-badge comprehensive">
+                                    📋 Integral NFT
+                                </span>
+                            {% else %}
+                                <span class="exam-badge individual">
+                                    📄 Caso {{ row.case_id }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="analysis-cell">
+                            {% if row.case_id == 0 %}
+                                <div class="nft-analysis">
+                                    <span class="nft-indicator">🔗</span>
+                                    <span class="analysis-text">IA + NFT</span>
+                                </div>
+                            {% else %}
+                                <div class="basic-analysis">
+                                    <span class="basic-indicator">🤖</span>
+                                    <span class="analysis-text">IA Básica</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="actions-cell">
+                            <div class="action-buttons">
+                                <a href="{{ url_for('view_result', result_id=row.id) }}" 
+                                   class="btn btn-view" 
+                                   title="Ver detalles completos">
+                                    👁️ Ver
+                                </a>
+                                <button onclick="quickPreview({{ row.id }})" 
+                                        class="btn btn-preview"
+                                        title="Vista previa rápida">
+                                    ⚡
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% if not results %}
+            <div class="no-results">
+                <div class="no-results-icon">📭</div>
+                <h4>No hay resultados aún</h4>
+                <p>Los exámenes completados aparecerán aquí automáticamente.</p>
+                <div class="no-results-tips">
+                    <h5>💡 Para comenzar:</h5>
+                    <ul>
+                        <li>Comparta el enlace de examen con estudiantes</li>
+                        <li>Los resultados aparecen en tiempo real</li>
+                        <li>Use filtros para encontrar datos específicos</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="system-info-section">
+        <h3>📋 Información del Sistema</h3>
+        <div class="info-grid">
+            <div class="info-card">
+                <h4>🔗 Casos NFT Configurados</h4>
+                <ul>
+                    <li><strong>Caso 1:</strong> NFT como título traslativo</li>
+                    <li><strong>Caso 2:</strong> Smart contracts y regalías</li>
+                    <li><strong>Caso 3:</strong> Tokenización sin autorización</li>
+                    <li><strong>Caso 4:</strong> Uso público NFT musical</li>
+                    <li><strong>Caso 5:</strong> Derechos constitucionales</li>
+                </ul>
+            </div>
+            <div class="info-card">
+                <h4>🤖 Evaluación con IA</h4>
+                <div class="ai-criteria">
+                    <span class="criterion">Comprensión NFT</span>
+                    <span class="criterion">Aplicación normativa</span>
+                    <span class="criterion">Smart contracts</span>
+                    <span class="criterion">Marco constitucional</span>
+                    <span class="criterion">Coherencia jurídica</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <style>
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Header */
+.dashboard-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+}
+
+.dashboard-header h2 {
+    margin: 0 0 0.5rem 0;
+    color: var(--white);
+}
+
+.header-subtitle {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.btn-logout {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+}
+
+/* Statistics Cards */
 .dashboard-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
 .stat-card {
-    background: white;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid #e1e8ed;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.stat-icon {
+    font-size: 3rem;
+    opacity: 0.8;
+}
+
+.stat-content h3 {
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.stat-content p {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.stat-content small {
+    color: var(--dark-gray);
+    font-size: 0.85rem;
+}
+
+/* Color coding for stat cards */
+.total-exams { border-left: 5px solid var(--secondary-color); }
+.average-score { border-left: 5px solid var(--success-color); }
+.completion-rate { border-left: 5px solid var(--warning-color); }
+.nft-performance { border-left: 5px solid #9c27b0; }
+
+/* Filters */
+.filter-section {
+    background: var(--white);
     padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    text-align: center;
-    border-left: 4px solid #1e3a5f;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid #e1e8ed;
 }
 
-.stat-card h3 {
-    font-size: 2rem;
-    margin: 0;
-    color: #1e3a5f;
+.filter-section h3 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
 }
 
-.stat-card p {
-    margin: 0.5rem 0 0 0;
-    color: #666;
+.filter-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
-.result-table {
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.score-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    color: white;
-    font-weight: bold;
-}
-
-.score-high { background-color: #28a745; }
-.score-medium { background-color: #ffc107; color: #000; }
-.score-low { background-color: #dc3545; }
-
-.badge-complete {
-    background-color: #17a2b8;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-}
-
-.badge-partial {
-    background-color: #6c757d;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-}
-
-.btn-view {
-    background-color: #007bff;
-    color: white;
-    padding: 0.5rem 1rem;
-    text-decoration: none;
-    border-radius: 4px;
+.filter-btn {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid #e1e8ed;
+    background: var(--white);
+    border-radius: 25px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
     font-size: 0.9rem;
 }
 
-.btn-view:hover {
-    background-color: #0056b3;
+.filter-btn:hover {
+    border-color: var(--secondary-color);
+    background: #f8f9fa;
 }
 
-.btn-logout {
-    background-color: #dc3545;
-    color: white;
+.filter-btn.active {
+    background: var(--secondary-color);
+    color: var(--white);
+    border-color: var(--secondary-color);
+}
+
+/* Results Section */
+.results-section {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid #e1e8ed;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e1e8ed;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.table-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Table Styles */
+.table-container {
+    overflow-x: auto;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.results-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--primary-color);
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.results-table th:hover {
+    background: #e9ecef;
+}
+
+.sort-arrow {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+.results-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.result-row:hover {
+    background: #f8f9fa;
+}
+
+/* Cell Specific Styles */
+.id-badge {
+    background: var(--light-gray);
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.date-display strong {
+    color: var(--primary-color);
+}
+
+.student-info strong {
+    color: var(--primary-color);
+}
+
+.carne-badge {
+    background: var(--secondary-color);
+    color: var(--white);
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.carne-badge.unknown {
+    background: var(--dark-gray);
+}
+
+.score-display {
+    text-align: center;
+}
+
+.score-badge {
     padding: 0.5rem 1rem;
-    text-decoration: none;
-    border-radius: 4px;
-    margin-top: 2rem;
+    border-radius: 20px;
+    color: var(--white);
+    font-weight: 700;
+    font-size: 1rem;
     display: inline-block;
 }
+
+.score-high { background: var(--success-color); }
+.score-medium { background: var(--warning-color); color: #000; }
+.score-low { background: var(--accent-color); }
+
+.exam-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.exam-badge.comprehensive {
+    background: var(--secondary-color);
+    color: var(--white);
+}
+
+.exam-badge.individual {
+    background: var(--dark-gray);
+    color: var(--white);
+}
+
+.nft-analysis,
+.basic-analysis {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nft-indicator {
+    color: #9c27b0;
+}
+
+.basic-indicator {
+    color: var(--secondary-color);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-view {
+    background: var(--secondary-color);
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn-view:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+.btn-preview {
+    background: var(--warning-color);
+    color: var(--white);
+    border: none;
+    padding: 0.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: var(--transition);
+}
+
+.btn-preview:hover {
+    background: #e67e22;
+    transform: translateY(-1px);
+}
+
+/* No Results */
+.no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--dark-gray);
+}
+
+.no-results-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.no-results h4 {
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.no-results-tips {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-top: 2rem;
+    text-align: left;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.no-results-tips h5 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.no-results-tips ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.no-results-tips li {
+    margin-bottom: 0.5rem;
+}
+
+/* System Info */
+.system-info-section {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-top: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid #e1e8ed;
+}
+
+.system-info-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.info-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border-left: 5px solid var(--secondary-color);
+}
+
+.info-card h4 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-card li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.ai-criteria {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.criterion {
+    background: var(--secondary-color);
+    color: var(--white);
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+    
+    .dashboard-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .filter-buttons {
+        justify-content: center;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .table-actions {
+        justify-content: center;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
 </style>
+
+<script>
+// Dashboard functionality
+function filterResults(filterType) {
+    const rows = document.querySelectorAll('.result-row');
+    const buttons = document.querySelectorAll('.filter-btn');
+    
+    // Update active button
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    rows.forEach(row => {
+        let show = true;
+        
+        switch(filterType) {
+            case 'comprehensive':
+                show = row.dataset.type === 'comprehensive';
+                break;
+            case 'high-score':
+                show = parseFloat(row.dataset.score) > 80;
+                break;
+            case 'recent':
+                const rowDate = new Date(row.dataset.date);
+                const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+                show = rowDate > threeDaysAgo;
+                break;
+            case 'all':
+            default:
+                show = true;
+        }
+        
+        row.style.display = show ? 'table-row' : 'none';
+    });
+}
+
+function sortTable(columnIndex) {
+    const table = document.getElementById('resultsTable');
+    const tbody = table.getElementsByTagName('tbody')[0];
+    const rows = Array.from(tbody.rows);
+    
+    // Determine sort order
+    const isAscending = table.dataset.sortOrder !== 'asc';
+    table.dataset.sortOrder = isAscending ? 'asc' : 'desc';
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        const aVal = a.cells[columnIndex].textContent.trim();
+        const bVal = b.cells[columnIndex].textContent.trim();
+        
+        // Handle numeric values
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return isAscending ? aNum - bNum : bNum - aNum;
+        }
+        
+        // Handle text values
+        return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function quickPreview(resultId) {
+    // Simple preview modal (basic implementation)
+    alert(`Vista previa rápida del resultado #${resultId}\n\nFuncionalidad en desarrollo...`);
+}
+
+function exportResults() {
+    const results = [];
+    const rows = document.querySelectorAll('.result-row');
+    
+    rows.forEach(row => {
+        if (row.style.display !== 'none') {
+            const cells = row.querySelectorAll('td');
+            results.push([
+                cells[0].textContent.trim(),  // ID
+                cells[1].textContent.trim(),  // Fecha
+                cells[2].textContent.trim(),  // Estudiante
+                cells[3].textContent.trim(),  // Carné
+                cells[4].textContent.trim(),  // Puntaje
+                cells[5].textContent.trim()   // Tipo
+            ]);
+        }
+    });
+    
+    // Create CSV
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "ID,Fecha,Estudiante,Carné,Puntaje,Tipo\n";
+    results.forEach(row => {
+        csvContent += row.join(",") + "\n";
+    });
+    
+    // Download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `resultados_nft_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function refreshData() {
+    location.reload();
+}
+</script>
 {% endblock %}

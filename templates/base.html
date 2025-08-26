@@ -3,82 +3,330 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title if title else 'Evaluación - Universidad San Pablo' }}</title>
+    <title>{{ title if title else 'NFTs y Propiedad Intelectual - Organismo Judicial de Guatemala' }}</title>
     
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BBL7T19QXK"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-BBL7T19QXK');
-    </script>
+    <!-- Meta tags -->
+    <meta name="description" content="Sistema de evaluación integral sobre NFTs y Propiedad Intelectual del Organismo Judicial de Guatemala">
+    <meta name="keywords" content="NFT, tokens no fungibles, propiedad intelectual, smart contracts, Guatemala, derecho">
+    <meta name="author" content="Organismo Judicial de Guatemala">
     
+    <!-- Favicon -->
+    <link rel="icon" href="legaltech.com.gt/themeoj/img/logoBlanco.png" type="image/png">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- JavaScript -->
     <script defer src="{{ url_for('static', filename='script.js') }}"></script>
-
 </head>
 <body>
+    <!-- Skip Navigation for Accessibility -->
+    <a href="#main-content" class="skip-nav sr-only">Saltar al contenido principal</a>
+    
+    <!-- Header -->
     <header>
-        <img src="https://uspg.edu.gt/usp/wp-content/uploads/2022/04/L-bLANCO.png" alt="Universidad San Pablo" class="header-logo">
-        <div class="header-content">
-            <h1 class="header-title">Test 1 - Mario Siekavizza</h1>
-            <p class="header-subtitle">Evaluación de Conocimientos</p>
-        </div>
-    </header>
-    <main>
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <ul class="flashes">
-            {% for message in messages %}<li>{{ message }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
-    </main>
-    <footer>
-        <div class="footer-container">
-            <div class="footer-content">
-                <div class="footer-left">
-                    <div class="university-section">
-                        <img src="https://uspg.edu.gt/usp/wp-content/uploads/2022/04/L-bLANCO.png" alt="Universidad San Pablo" class="footer-university-logo">
-                        <div class="university-info">
-                            <p class="university-name">Universidad San Pablo de Guatemala</p>
-                            <p class="university-tagline">Excelencia Académica</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="footer-center">
-                    <div class="course-info">
-                        <p class="course-title">Curso - - </p>
-                        <p class="professor">Mario Siekavizza</p>
-                    </div>
-                </div>
-                
-                <div class="footer-right">
-                    <div class="tech-section">
-                        <p class="tech-label">Desarrollado por:</p>
-                        <div class="developer-info">
-                            <img src="https://legaltech.com.gt/fav/favicon-96x96.png" alt="LegalTech" class="legaltech-logo">
-                            <div class="developer-details">
-                                <a href="https://gt.linkedin.com/in/tansalazar" target="_blank" class="developer-link">
-                                    <span class="developer-name">David Salazar</span>
-                                    <span class="company-name">LegalTech</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+        <div class="header-container">
+            <div class="header-left">
+                <img src="legaltech.com.gt/themeoj/img/logoBlanco.png" 
+                     alt="Organismo Judicial de Guatemala" 
+                     class="header-logo">
+                <div class="header-content">
+                    <h1>NFTs y Propiedad Intelectual</h1>
+                    <p class="header-subtitle">Sistema de Evaluación Integral</p>
                 </div>
             </div>
-            
-            <div class="footer-bottom">
-                <div class="footer-divider"></div>
-                <p class="copyright">
-                    © 2025 LegalTech Guatemala - Todos los derechos reservados
-                </p>
+            <div class="header-right">
+                <div class="nft-badge">
+                    🔗 Tokens No Fungibles
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for message in messages %}
+        <div class="alert alert-warning" role="alert">
+            <strong>⚠️ Atención:</strong> {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-left">
+                <img src="legaltech.com.gt/themeoj/img/logoBlanco.png" 
+                     alt="Organismo Judicial de Guatemala" 
+                     class="footer-logo">
+                <div class="footer-info">
+                    <h4>Organismo Judicial de Guatemala</h4>
+                    <p>Sistema de Capacitación en NFTs y Propiedad Intelectual</p>
+                    <p>Tecnología LegalTech para la Educación Jurídica</p>
+                </div>
+            </div>
+            <div class="footer-right">
+                <div class="footer-meta">
+                    <p>&copy; {{ moment().format('YYYY') if moment else '2024' }} Organismo Judicial de Guatemala</p>
+                    <p>Todos los derechos reservados</p>
+                </div>
             </div>
         </div>
     </footer>
+
+    <!-- Progress Indicator (will be added by JavaScript) -->
+    <div class="progress-indicator" style="display: none;">
+        <div class="progress-bar"></div>
+        <div class="progress-text">0%</div>
+    </div>
+
+    <!-- Additional Styles for Templates -->
+    <style>
+        /* Flash Messages */
+        .flash-messages {
+            max-width: 1200px;
+            margin: 1rem auto;
+            padding: 0 2rem;
+        }
+        
+        /* Progress Indicator */
+        .progress-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 8px;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* Skip Navigation */
+        .skip-nav {
+            position: absolute;
+            left: -10000px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+        
+        .skip-nav:focus {
+            position: static;
+            width: auto;
+            height: auto;
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            text-decoration: none;
+            z-index: 10000;
+        }
+        
+        /* Accessibility Focus */
+        .focus-within {
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* Auto-save notification */
+        .auto-save-notification {
+            position: fixed;
+            top: 80px;
+            right: 2rem;
+            background: var(--white);
+            border: 2px solid var(--success-color);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        
+        .auto-save-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .notification-icon {
+            font-size: 1.5rem;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--dark-gray);
+            padding: 0;
+            margin-left: 1rem;
+        }
+        
+        /* Submission loading */
+        .submission-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(44, 62, 80, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+        }
+        
+        .loading-content {
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .loading-steps {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        .step {
+            padding: 0.5rem 0;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            opacity: 1;
+            color: #3498db;
+        }
+        
+        .step.completed {
+            opacity: 1;
+            color: #27ae60;
+        }
+        
+        /* Validation Modal */
+        .validation-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .validation-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: var(--border-radius);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .modal-body ul {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .modal-body li {
+            margin-bottom: 0.5rem;
+            color: var(--dark-gray);
+        }
+        
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e1e8ed;
+            text-align: right;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 1rem;
+            }
+            
+            .header-right {
+                display: none;
+            }
+            
+            .flash-messages {
+                padding: 0 1rem;
+            }
+            
+            .auto-save-notification {
+                right: 1rem;
+                left: 1rem;
+                width: auto;
+            }
+        }
+    </style>
 </body>
 </html>

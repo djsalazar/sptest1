@@ -1,27 +1,8 @@
 """
-Core server for the monolithic examination application.
+Core server for the NFTs and Intellectual Property examination application.
 
-This application serves two primary audiences:
-
-1. **Students** – They access a test page that displays a case study with a
-   series of true/false questions. Each question is slightly rephrased at
-   runtime to avoid rote copying. Students supply a boolean answer and a
-   written justification. The frontend records how long the student
-   deliberates per question and whether the student pastes text into any
-   answer. When the test is submitted, the application immediately grades
-   the submission according to a pre‑defined rubric and returns the score
-   alongside actionable feedback. All interactions are stored in a
-   SQLite database for later review.
-
-2. **Instructors** – They log in through a simple password‑protected page
-   (password defined in the specification: ``S4nPablo2025``) to view all
-   submissions, browse individual responses, inspect event logs (for
-   example, paste events), and review aggregated statistics.
-
-The application is intentionally straightforward and self‑contained. It
-uses only Flask and SQLite for persistence, making it feasible to build
-and deploy within a couple of hours. The code also includes integration
-with Anthropic's Claude API for sophisticated argumentation analysis.
+Updated for Organismo Judicial de Guatemala with NFT and IP focus.
+Password changed to 'organismojudicial'.
 """
 
 from __future__ import annotations
@@ -36,14 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-
-# Load environment variables from a .env file if present. This allows
-# operators to provide sensitive settings like API keys without
-# embedding them directly in the source code or passing them on the
-# command line. Only call this at import time so that overriding
-# environment variables still take precedence.
+# Load environment variables from a .env file if present
 from dotenv import load_dotenv
-
 load_dotenv()
 
 import requests
@@ -51,85 +26,229 @@ from flask import (Flask, g, redirect, render_template, request, session,
                    url_for, flash)
 
 
-
-
 ###############################################################################
 # Configuration
 ###############################################################################
 
-# When set, this environment variable should contain a valid Anthropic API
-# key. The ``analyze_argumentation_with_claude`` function uses it to analyze arguments.
+# Anthropic API key for Claude integration
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 
-# Instructor password. In a production deployment this should be stored in
-# configuration or environment rather than hard‑coded. For this exercise
-# we follow the specification.
-INSTRUCTOR_PASSWORD = "S4nPablo2025"
+# Updated instructor password
+INSTRUCTOR_PASSWORD = "organismojudicial"
 
-
-# File path to the SQLite database. Stored relative to this file.
+# File path to the SQLite database
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "exam.db"
 
 # Flask setup
 app = Flask(__name__)
-# Secret key is required for sessions; generate a random value if none
 app.secret_key = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits, k=32)))
 
-# Debug logging (DESPUÉS de definir las variables)
+# Debug logging
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Print environment variables at startup
 print(f"🔑 CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
 if CLAUDE_API_KEY:
     print(f"🔑 CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
-    print(f"🔑 CLAUDE_API_KEY (longitud): {len(CLAUDE_API_KEY)} caracteres")
-else:
-    print("❌ CLAUDE_API_KEY no encontrado")
-    
-    
-    
-# Cache temporal para paráfrasis (evitar múltiples llamadas)
-from datetime import datetime, timedelta
-import threading
 
-PARAPHRASE_CACHE = {}
-CACHE_LOCK = threading.Lock()
-CACHE_TIMEOUT = timedelta(minutes=10)  # Cache por 10 minutos
 
-def get_cached_paraphrase(original_text: str) -> Optional[str]:
-    """Get cached paraphrase if available and not expired."""
-    with CACHE_LOCK:
-        if original_text in PARAPHRASE_CACHE:
-            cached_item = PARAPHRASE_CACHE[original_text]
-            if datetime.now() - cached_item['timestamp'] < CACHE_TIMEOUT:
-                print(f"📦 Usando paráfrasis cacheada: {original_text[:50]}...")
-                return cached_item['paraphrase']
-            else:
-                # Cache expirado, remover
-                del PARAPHRASE_CACHE[original_text]
-    return None
-
-def cache_paraphrase(original_text: str, paraphrase: str):
-    """Cache a paraphrase with timestamp."""
-    with CACHE_LOCK:
-        PARAPHRASE_CACHE[original_text] = {
-            'paraphrase': paraphrase,
-            'timestamp': datetime.now()
-        }
 ###############################################################################
-# Utility functions
+# Data Models
+###############################################################################
+
+class Question:
+    """Represents a true/false question with rephrasing capabilities."""
+    
+    def __init__(self, text: str, correct: bool, keywords: List[str]):
+        self.text = text
+        self.correct = correct
+        self.keywords = keywords
+
+    def random_rephrase(self, original_text: str) -> str:
+        """Generate random variations to prevent copy-paste."""
+        variations = [
+            original_text,
+            f"Considere lo siguiente: {original_text}",
+            f"Analice si es correcto afirmar que: {original_text}",
+            f"Desde la perspectiva jurídica: {original_text}"
+        ]
+        return random.choice(variations)
+
+    def get_text(self) -> str:
+        return self.random_rephrase(self.text)
+
+
+class Case:
+    """Representation of a legal case with associated questions."""
+
+    def __init__(self, case_id: int, title: str, description: str, questions: List[Question]):
+        self.case_id = case_id
+        self.title = title
+        self.description = description
+        self.questions = questions
+
+
+# Updated cases focused on NFTs and Intellectual Property
+CASES: Dict[int, Case] = {
+    1: Case(
+        case_id=1,
+        title="NFT como Título Traslativo de Dominio",
+        description=(
+            "Un museo guatemalteco subasta un NFT vinculado a una obra digital inédita. "
+            "El comprador sostiene que, por adquirir el NFT, se convierte en 'dueño absoluto' "
+            "de los derechos de explotación patrimonial de la obra. El comprador argumenta "
+            "que el NFT opera como un título que le transfiere automáticamente todos los "
+            "derechos sobre la obra intelectual protegida."
+        ),
+        questions=[
+            Question(
+                text=(
+                    "El NFT opera jurídicamente como un título traslativo de dominio sobre la "
+                    "obra protegida, sin necesidad de cesión expresa según la legislación guatemalteca."
+                ),
+                correct=False,
+                keywords=["NFT", "título traslativo", "cesión expresa", "obra protegida", "art. 3 LPI", "art. 13 LPI"]
+            ),
+            Question(
+                text=(
+                    "La compra de un NFT implica automáticamente la adquisición de los derechos "
+                    "patrimoniales de la obra intelectual, aplicando el principio de que el soporte "
+                    "y la obra son jurídicamente idénticos."
+                ),
+                correct=False,
+                keywords=["derechos patrimoniales", "soporte", "obra intelectual", "separación soporte-obra"]
+            ),
+        ]
+    ),
+    2: Case(
+        case_id=2,
+        title="Smart Contracts y Regalías Automáticas",
+        description=(
+            "Un artista guatemalteco programa un smart contract ERC-721 que garantiza "
+            "regalías del 10% en cada reventa del NFT. El comprador alega que esa cláusula "
+            "es inválida porque nunca firmó un contrato físico y que el smart contract "
+            "carece de validez jurídica en Guatemala al no cumplir con los requisitos "
+            "formales tradicionales."
+        ),
+        questions=[
+            Question(
+                text=(
+                    "El contrato inteligente carece de efectos jurídicos en Guatemala, ya que "
+                    "no cumple con la forma escrita exigida por la Ley de Propiedad Intelectual "
+                    "para pactar regalías."
+                ),
+                correct=False,
+                keywords=["smart contract", "forma escrita", "LPI", "regalías", "Ley de Firma Electrónica"]
+            ),
+            Question(
+                text=(
+                    "Los smart contracts pueden tener plena validez jurídica en Guatemala bajo "
+                    "el principio de equivalencia funcional de la firma electrónica avanzada y "
+                    "la autonomía de la voluntad contractual."
+                ),
+                correct=True,
+                keywords=["equivalencia funcional", "firma electrónica avanzada", "autonomía de la voluntad"]
+            ),
+        ]
+    ),
+    3: Case(
+        case_id=3,
+        title="Tokenización de Obra Física Sin Autorización",
+        description=(
+            "Un marchante de arte emite un NFT que representa un cuadro físico de un autor "
+            "guatemalteco vivo, sin autorización del creador, y lo vende en OpenSea. "
+            "El comprador alega que como se trata de una 'representación digital' del cuadro "
+            "y no la obra física en sí, no hay infracción de derechos de autor."
+        ),
+        questions=[
+            Question(
+                text=(
+                    "La tokenización de una obra plástica sin autorización constituye infracción "
+                    "a los derechos morales y patrimoniales del autor según la legislación guatemalteca."
+                ),
+                correct=True,
+                keywords=["tokenización", "autorización", "derechos morales", "derechos patrimoniales", "art. 9 LPI"]
+            ),
+            Question(
+                text=(
+                    "La representación digital de una obra física no requiere autorización del autor "
+                    "si se trata únicamente de un NFT y no de la reproducción de la obra original."
+                ),
+                correct=False,
+                keywords=["representación digital", "reproducción", "autorización", "fijación digital"]
+            ),
+        ]
+    ),
+    4: Case(
+        case_id=4,
+        title="Uso Público de NFT Musical",
+        description=(
+            "Un empresario guatemalteco adquiere un NFT de una canción de un artista local "
+            "y lo utiliza como pista de ambientación en conciertos públicos remunerados. "
+            "El empresario sostiene que la compra del NFT ya le otorga automáticamente "
+            "el derecho de comunicación pública de la obra musical."
+        ),
+        questions=[
+            Question(
+                text=(
+                    "La compra de un NFT de una obra musical incluye implícitamente la licencia "
+                    "de comunicación pública según el derecho guatemalteco."
+                ),
+                correct=False,
+                keywords=["comunicación pública", "licencia implícita", "art. 16 LPI", "art. 17 LPI"]
+            ),
+            Question(
+                text=(
+                    "Los derechos de comunicación pública son independientes de la propiedad "
+                    "del NFT y requieren licencia expresa del titular de derechos patrimoniales."
+                ),
+                correct=True,
+                keywords=["comunicación pública", "licencia expresa", "derechos patrimoniales", "independencia"]
+            ),
+        ]
+    ),
+    5: Case(
+        case_id=5,
+        title="NFT y Derechos Constitucionales",
+        description=(
+            "Un programador guatemalteco crea y vende NFTs con poemas de autores nacionales "
+            "fallecidos hace menos de 50 años, comercializando las obras en plataformas "
+            "internacionales. Sostiene que lo hace amparado en el derecho constitucional "
+            "de acceso a la cultura (art. 71 CN) y que está promoviendo el patrimonio "
+            "cultural guatemalteco."
+        ),
+        questions=[
+            Question(
+                text=(
+                    "La venta de NFTs de obras literarias protegidas puede justificarse bajo "
+                    "el derecho constitucional de acceso a la cultura, prevaleciendo sobre "
+                    "los derechos patrimoniales de los herederos."
+                ),
+                correct=False,
+                keywords=["acceso a la cultura", "art. 71 CN", "derechos patrimoniales", "herederos", "art. 42 CN"]
+            ),
+            Question(
+                text=(
+                    "Existe un equilibrio constitucional entre el acceso a la cultura y la "
+                    "protección del autor, debiendo respetarse los derechos patrimoniales "
+                    "durante el término de protección legal."
+                ),
+                correct=True,
+                keywords=["equilibrio constitucional", "protección del autor", "término de protección", "principio de legalidad"]
+            ),
+        ]
+    ),
+}
+
+
+###############################################################################
+# Database Functions
 ###############################################################################
 
 def get_db() -> sqlite3.Connection:
-    """Return a SQLite connection tied to the application context.
-
-    The connection is stored on the Flask `g` object so that it can be
-    reused across requests. The database is automatically initialized on
-    first access.
-    """
+    """Return a SQLite connection tied to the application context."""
     db: Optional[sqlite3.Connection] = getattr(g, '_database', None)
     if db is None:
         db = sqlite3.connect(DB_PATH)
@@ -148,16 +267,7 @@ def close_connection(exception: Optional[BaseException]) -> None:
 
 
 def ensure_schema(db: sqlite3.Connection) -> None:
-    """
-    Create the necessary tables if they do not already exist. The schema
-    includes:
-
-    - ``results``: Each test submission from a student. Contains
-      identifiers, timestamps, aggregated scores and raw JSON for per‑question
-      grading details.
-    - ``events``: Logs of notable frontend interactions (question start,
-      question end, paste events) for each submission.
-    """
+    """Create the necessary tables if they do not already exist."""
     cursor = db.cursor()
     cursor.execute(
         """
@@ -187,8 +297,12 @@ def ensure_schema(db: sqlite3.Connection) -> None:
     db.commit()
 
 
+###############################################################################
+# AI Integration Functions
+###############################################################################
+
 def call_claude(prompt: str) -> Optional[str]:
-    """..."""
+    """Call Claude API for paraphrasing questions."""
     if not CLAUDE_API_KEY:
         return None
     
@@ -201,12 +315,12 @@ def call_claude(prompt: str) -> Optional[str]:
                 "anthropic-version": "2023-06-01"
             },
             json={
-                "model": "claude-3-5-sonnet-20241022",  # MODELO CORRECTO
+                "model": "claude-3-5-sonnet-20241022",
                 "max_tokens": 200,
                 "messages": [
                     {
                         "role": "user", 
-                        "content": f"""Parafrasea la siguiente pregunta legal manteniendo EXACTAMENTE el mismo significado y estructura lógica. 
+                        "content": f"""Parafrasea la siguiente pregunta legal sobre NFTs manteniendo EXACTAMENTE el mismo significado y estructura lógica. 
 Solo cambia algunas palabras por sinónimos y ajusta levemente la redacción, pero conserva la claridad y coherencia:
 
 "{prompt}"
@@ -220,17 +334,14 @@ Responde ÚNICAMENTE con la pregunta parafraseada, sin explicaciones adicionales
         
         if response.status_code == 200:
             data = response.json()
-            # The new API returns the completion in content[0]["text"]
             paraphrased = data["content"][0]["text"].strip()
             
-            # Verificar que la paráfrasis sea coherente (no muy corta ni muy larga)
             if paraphrased and len(paraphrased) > 50 and len(paraphrased) < len(prompt) * 2:
                 return paraphrased
             else:
-                print(f"Paráfrasis inválida: {paraphrased}")
                 return None
         else:
-            print(f"Error API Claude: {response.status_code} - {response.text}")
+            print(f"Error API Claude: {response.status_code}")
             return None
             
     except Exception as e:
@@ -240,19 +351,12 @@ Responde ÚNICAMENTE con la pregunta parafraseada, sin explicaciones adicionales
 
 def analyze_argumentation_with_claude(user_reason: str, case_context: str, 
                                     question_text: str, user_bool: bool, correct_bool: bool) -> Dict[str, any]:
-    """
-    Use Claude API to analyze argumentation quality based on detailed rubric.
-    Updated for 5-point scale.
-    """
-    print(f"🔄 Preparando llamada a Claude API...")
+    """Use Claude API to analyze argumentation quality for NFTs and IP."""
     
     if not CLAUDE_API_KEY:
         raise Exception("CLAUDE_API_KEY no configurado")
     
-    if len(CLAUDE_API_KEY) < 20:
-        raise Exception(f"CLAUDE_API_KEY parece inválido (longitud: {len(CLAUDE_API_KEY)})")
-    
-    prompt = f"""Eres un profesor experto en propiedad intelectual y conocimientos tradicionales. 
+    prompt = f"""Eres un profesor experto en NFTs y propiedad intelectual. 
 Evalúa la siguiente argumentación de un estudiante usando la rúbrica proporcionada.
 
 CONTEXTO DEL CASO:
@@ -269,40 +373,37 @@ ARGUMENTACIÓN DEL ESTUDIANTE:
 
 RÚBRICA DE EVALUACIÓN (escala 1-5 para cada criterio):
 
-1. Opinión propia fundada (1-5)
-2. Valores éticos (1-5)
-3. Lenguaje y terminología (1-5)
-4. Citas y precisión normativa (1-5)
-5. Estructura y coherencia (1-5)
-6. Profundidad y pertinencia (1-5)
-7. Capacidad crítica (1-5)
-8. Presentación y estilo (1-5)
-9. Innovación y creatividad (1-5)
+1. Comprensión conceptual NFT (1-5) - Demuestra comprensión de NFT vs. obra intelectual
+2. Aplicación normativa guatemalteca (1-5) - Aplica correctamente la LPI de Guatemala
+3. Distinción soporte-obra (1-5) - Identifica separación entre soporte digital y obra protegida
+4. Conocimiento de smart contracts (1-5) - Comprende aspectos jurídicos de contratos inteligentes
+5. Derechos patrimoniales y morales (1-5) - Diferencia y aplica derechos morales vs. patrimoniales
+6. Marco constitucional (1-5) - Balancea derechos constitucionales (cultura vs. autor)
+7. Coherencia argumentativa (1-5) - Presenta argumentos lógicos y coherentes
+8. Uso de jurisprudencia/doctrina (1-5) - Referencia apropiada a fuentes doctrinales y legales
+9. Aplicación práctica (1-5) - Conecta teoría con situaciones reales de NFTs
 
 INSTRUCCIONES:
 1. Evalúa cada criterio con una puntuación de 1-5
 2. Calcula el promedio de los 9 criterios y multiplícalo por 5 para obtener la puntuación sobre 5 puntos
-3. Proporciona feedback específico y constructivo
-4. Responde ÚNICAMENTE en formato JSON válido:
+3. Proporciona feedback específico y constructivo sobre NFTs y propiedad intelectual
 
+Responde ÚNICAMENTE en este formato JSON:
 {{
-    "criteria_scores": {{
-        "opinion_fundada": 3,
-        "valores_eticos": 2,
-        "lenguaje_terminologia": 4,
-        "citas_precision": 1,
-        "estructura_coherencia": 3,
-        "profundidad_fundamentacion": 2,
-        "capacidad_critica": 2,
-        "presentacion_estilo": 4,
-        "innovacion_creatividad": 2
-    }},
-    "total_argument_score": 25.0,
-    "feedback": "La argumentación muestra algunos elementos positivos pero requiere mayor fundamentación legal y análisis crítico más profundo..."
+    "comprension_nft": X,
+    "aplicacion_normativa": X,
+    "distincion_soporte": X,
+    "smart_contracts": X,
+    "derechos_patrimoniales": X,
+    "marco_constitucional": X,
+    "coherencia": X,
+    "jurisprudencia": X,
+    "aplicacion_practica": X,
+    "score": X.X,
+    "feedback": "Texto específico sobre NFTs y PI..."
 }}"""
-
+    
     try:
-        print(f"🌐 Enviando solicitud a Claude...")
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -311,90 +412,50 @@ INSTRUCCIONES:
                 "anthropic-version": "2023-06-01"
             },
             json={
-                "model": "claude-3-5-sonnet-20241022",  # MODELO CORRECTO
-                "max_tokens": 1500,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
+                "model": "claude-3-5-sonnet-20241022",
+                "max_tokens": 800,
+                "messages": [{"role": "user", "content": prompt}]
             },
             timeout=30
         )
         
-        print(f"📡 Respuesta HTTP: {response.status_code}")
-        
         if response.status_code == 200:
-            result = response.json()
-            content = result["content"][0]["text"]
-            print(f"📄 Contenido recibido: {content[:200]}...")
+            data = response.json()
+            response_text = data["content"][0]["text"].strip()
             
-            # Parse the JSON response
             try:
-                analysis = json.loads(content)
-                print(f"✅ JSON parseado correctamente")
+                analysis = json.loads(response_text)
                 return analysis
-            except json.JSONDecodeError as je:
-                print(f"❌ Error parseando JSON: {je}")
-                raise Exception(f"Respuesta JSON inválida de Claude: {content[:100]}...")
+            except json.JSONDecodeError:
+                print(f"Error parsing JSON: {response_text}")
+                return {"error": "Invalid JSON response"}
         else:
-            error_text = response.text
-            print(f"❌ Error HTTP {response.status_code}: {error_text}")
-            raise Exception(f"API request failed with status {response.status_code}: {error_text}")
+            print(f"Claude API error: {response.status_code}")
+            return {"error": f"API error: {response.status_code}"}
             
-    except requests.exceptions.Timeout:
-        print(f"⏰ Timeout en solicitud a Claude")
-        raise Exception("Timeout en solicitud a Claude API")
-    except requests.exceptions.RequestException as re:
-        print(f"🌐 Error de conexión: {re}")
-        raise Exception(f"Error de conexión a Claude API: {str(re)}")
     except Exception as e:
-        print(f"💥 Error inesperado: {e}")
-        raise Exception(f"Error inesperado en Claude API: {str(e)}")
+        print(f"Exception in analyze_argumentation_with_claude: {e}")
+        return {"error": str(e)}
 
 
-def simple_argument_evaluation(user_reason: str) -> float:
-    """
-    Fallback simple evaluation when Claude API is not available.
-    Updated to return max 40 points (will be scaled to 5).
-    """
-    reason = user_reason.strip()
-    word_count = len(reason.split())
-    
-    if word_count < 20:
-        length_factor = 0.0
-    elif word_count <= 150:
-        length_factor = (word_count - 20) / 130
-    else:
-        length_factor = 1.0
-    
-    markers = ["porque", "sin embargo", "por lo tanto", "no obstante", "por consiguiente"]
-    marker_hits = sum(1 for m in markers if m in reason.lower())
-    marker_factor = min(marker_hits / len(markers), 1.0)
-    
-    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0  # Return 40 max, will be scaled to 5
-
+###############################################################################
+# Evaluation Functions
+###############################################################################
 
 def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: bool, 
                            case_context: str, question_text: str) -> Tuple[float, Dict[str, any]]:
     """
-    Evaluate answer using AI for sophisticated argumentation analysis.
-    
-    Nueva estructura:
-    - Total por pregunta: 10 puntos
-    - Veracidad: 5 puntos (50%)
-    - Argumentación: 5 puntos (50%) 
-    - Penalizaciones: variables (restan del total)
+    Evaluate answer using AI for NFT and IP argumentation analysis.
+    Total per question: 10 points (5 for truth + 5 for argumentation)
     """
-    print(f"\n=== EVALUANDO RESPUESTA ===")
+    print(f"\n=== EVALUANDO RESPUESTA NFT ===")
     print(f"Pregunta: {question_text[:100]}...")
     print(f"Respuesta usuario: {user_bool} (Correcta: {correct_bool})")
     print(f"Justificación: '{user_reason}'")
     
     scores = {
-        "truth": 5.0 if user_bool == correct_bool else 0.0,  # 5 points max
-        "argument": 0.0,  # 5 points max (updated from 4)
+        "truth": 5.0 if user_bool == correct_bool else 0.0,
+        "argument": 0.0,
         "ai_penalty": 0.0,
         "ai_analysis": {},
         "feedback": ""
@@ -402,299 +463,55 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     
     print(f"Puntos por veracidad: {scores['truth']}/5")
     
-    # SISTEMA DE PENALIZACIONES MEJORADO
+    # NFT-specific penalty system
     reason_lower = user_reason.strip().lower()
     reason_length = len(user_reason.strip())
     
-    # 1. Penalización por respuestas muy cortas o inválidas
-    invalid_answers = ['si', 'no', 'tal vez', 'no se', 'puede que si', 'puede que no', 'la verdad no entiendo', 'puedes ser']
+    # Penalization for inadequate responses
+    invalid_answers = ['si', 'no', 'tal vez', 'no se', 'puede que si', 'puede que no']
     if reason_length < 10 or reason_lower in invalid_answers:
         scores["ai_penalty"] -= 1.0
-        print(f"❌ Justificación inadecuada: '{user_reason}' - Penalización: -1.0 puntos")
+        print(f"❌ Justificación inadecuada - Penalización: -1.0 puntos")
     elif reason_length < 20:
         scores["ai_penalty"] -= 0.5
-        print(f"⚠️ Justificación muy corta ({reason_length} chars) - Penalización: -0.5 puntos")
+        print(f"⚠️ Justificación muy corta - Penalización: -0.5 puntos")
     
-    # 2. Penalización por uso de IA
-    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje", "claude", "bot", "artificial intelligence"]
+    # AI usage detection
+    ai_indicators = ["chatgpt", "gpt", "inteligencia artificial", "ia generativa", "modelo de lenguaje", "claude", "bot"]
     if any(ind in reason_lower for ind in ai_indicators):
         scores["ai_penalty"] -= 1.0
         print(f"❌ Uso de IA detectado - Penalización: -1.0 puntos")
     
-    # 3. Límite de penalización (no puede bajar de 0)
-    if scores["ai_penalty"] < -3.0:  # Increased limit for new scale
-        scores["ai_penalty"] = -3.0
-        print(f"⚠️ Penalización limitada a -3.0 puntos máximo")
+    # Copy-paste detection
+    if reason_length > 500:
+        scores["ai_penalty"] -= 0.5
+        print(f"⚠️ Respuesta sospechosamente larga - Penalización: -0.5 puntos")
     
-    # If no Claude API key, fall back to simple evaluation
-    if not CLAUDE_API_KEY:
-        print("❌ No hay CLAUDE_API_KEY - usando evaluación simple")
-        simple_score = simple_argument_evaluation(user_reason)
-        scores["argument"] = simple_score * 0.125  # Scale to 5 points max (40 -> 5)
-        scores["feedback"] = "Evaluación automática básica - Configure CLAUDE_API_KEY para análisis avanzado con IA."
-        print(f"Puntos por argumentación (simple): {scores['argument']}/5")
-    else:
-        # Use Claude API for detailed analysis
-        print(f"🤖 Intentando análisis con Claude API...")
+    # AI analysis for argumentation
+    if CLAUDE_API_KEY and reason_length >= 20:
         try:
-            ai_analysis = analyze_argumentation_with_claude(
-                user_reason, case_context, question_text, user_bool, correct_bool
-            )
-            # Updated scaling: 45 points max -> 5 points
-            scores["argument"] = ai_analysis["total_argument_score"] * 0.111  # 45 -> 5 points
-            scores["ai_analysis"] = ai_analysis["criteria_scores"]
-            scores["feedback"] = ai_analysis["feedback"]
-            print(f"✅ Análisis IA exitoso - Puntos: {scores['argument']}/5")
+            ai_analysis = analyze_argumentation_with_claude(user_reason, case_context, question_text, user_bool, correct_bool)
+            
+            if "error" not in ai_analysis and "score" in ai_analysis:
+                scores["argument"] = min(ai_analysis.get("score", 0.0), 5.0)
+                scores["ai_analysis"] = ai_analysis
+                scores["feedback"] = ai_analysis.get("feedback", "")
+                print(f"✅ Análisis IA completado - Puntos argumentación: {scores['argument']}/5")
+            else:
+                print(f"❌ Error en análisis IA: {ai_analysis}")
+                scores["argument"] = 2.0  # Default score
         except Exception as e:
-            print(f"❌ Error en Claude API: {e}")
-            simple_score = simple_argument_evaluation(user_reason)
-            scores["argument"] = simple_score * 0.125  # Scale to 5 points max
-            scores["feedback"] = f"Error en el análisis de IA. Se aplicó evaluación básica automática."
-            print(f"Puntos por argumentación (fallback): {scores['argument']}/5")
-    
-    # Calcular total (no puede ser negativo)
-    total = max(scores["truth"] + scores["argument"] + scores["ai_penalty"], 0.0)
-    
-    print(f"📊 Puntuación total: {total}/10")
-    print(f"   - Veracidad: {scores['truth']}/5")
-    print(f"   - Argumentación: {scores['argument']:.1f}/5") 
-    print(f"   - Penalizaciones: {scores['ai_penalty']}")
-    print("=== FIN EVALUACIÓN ===\n")
-    
-    return total, scores
-
-def simple_argument_evaluation(user_reason: str) -> float:
-    """
-    Fallback simple evaluation when Claude API is not available.
-    Updated to return max 40 points (will be scaled to 5).
-    """
-    reason = user_reason.strip()
-    word_count = len(reason.split())
-    
-    if word_count < 20:
-        length_factor = 0.0
-    elif word_count <= 150:
-        length_factor = (word_count - 20) / 130
+            print(f"❌ Excepción en análisis IA: {e}")
+            scores["argument"] = 2.0
     else:
-        length_factor = 1.0
+        scores["argument"] = 2.0 if reason_length >= 50 else 1.0
     
-    markers = ["porque", "sin embargo", "por lo tanto", "no obstante", "por consiguiente"]
-    marker_hits = sum(1 for m in markers if m in reason.lower())
-    marker_factor = min(marker_hits / len(markers), 1.0)
+    # Calculate total score
+    total_score = scores["truth"] + scores["argument"] + scores["ai_penalty"]
+    total_score = max(0.0, min(10.0, total_score))  # Ensure 0-10 range
     
-    return (length_factor * 0.6 + marker_factor * 0.4) * 40.0  # Return 40 max, will be scaled to 5
-
-
-def random_rephrase(question: str) -> str:
-    """
-    Generate a non‑trivial rephrasing of a question. Uses cache to avoid
-    repeated API calls for the same question.
-    """
-    # Check cache first
-    cached = get_cached_paraphrase(question)
-    if cached:
-        return cached
-    
-    # Try to call Anthropic for paraphrasing
-    rephrased = call_claude(question)
-    if rephrased:
-        print(f"✅ Paráfrasis nueva: {question[:50]}... -> {rephrased[:50]}...")
-        cache_paraphrase(question, rephrased)
-        return rephrased
-    
-    # If Claude API fails, cache original to avoid future calls
-    print(f"⚠️ API falló, usando original: {question[:50]}...")
-    cache_paraphrase(question, question)
-    return question
-
-def test_claude_api() -> bool:
-    """
-    Test if Claude API is working correctly.
-    """
-    if not CLAUDE_API_KEY:
-        print("❌ No se encontró CLAUDE_API_KEY")
-        return False
-    
-    test_question = "¿Esta es una pregunta de prueba?"
-    result = call_claude(test_question)
-    
-    if result:
-        print(f"✅ API de Claude funciona correctamente")
-        print(f"   Original: {test_question}")
-        print(f"   Parafraseado: {result}")
-        return True
-    else:
-        print("❌ API de Claude no está funcionando")
-        return False
-
-
-###############################################################################
-# Case and question definitions
-###############################################################################
-
-class Question:
-    """Representation of a true/false question tied to a case."""
-
-    def __init__(self, text: str, correct: bool, keywords: List[str]):
-        self.text = text
-        self.correct = correct
-        self.keywords = keywords
-
-    def rephrased(self) -> str:
-        """Return a rephrased version of the question."""
-        return random_rephrase(self.text)
-
-
-class Case:
-    """Representation of a legal case with associated questions."""
-
-    def __init__(self, case_id: int, title: str, description: str, questions: List[Question]):
-        self.case_id = case_id
-        self.title = title
-        self.description = description
-        self.questions = questions
-
-
-# Define the cases and their questions. For brevity the descriptions and
-# keyword lists are simplified. In a real deployment you might load these
-# from a JSON file or database.
-CASES: Dict[int, Case] = {
-    1: Case(
-        case_id=1,
-        title="Conocimientos Tradicionales y Patentes (México)",
-        description=(
-            "Una empresa mexicana sintetizó un compuesto químico basado en un conocimiento tradicional "
-            "de una comunidad indígena. La empresa no divulgó el origen del recurso ni solicitó el consentimiento "
-            "previo de la comunidad. Se cuestiona la patentabilidad y la participación en los beneficios."
-        ),
-        questions=[
-            Question(
-                text=(
-                    "Aunque el compuesto sintetizado sea nuevo y cumpla con los requisitos de patentabilidad, "
-                    "la falta de divulgación del origen del recurso y del consentimiento de la comunidad no afecta la "
-                    "concesión de la patente."
-                ),
-                correct=False,
-                keywords=["divulgación", "consentimiento", "comunidad", "patentabilidad"]
-            ),
-            Question(
-                text=(
-                    "La comunidad puede reclamar una participación en los beneficios incluso si la patente se concede, "
-                    "basándose en principios de equidad y justicia."
-                ),
-                correct=True,
-                keywords=["beneficios", "equidad", "justicia", "comunidad"]
-            ),
-        ]
-    ),
-    2: Case(
-        case_id=2,
-        title="Expresiones Culturales y Marcas (Guatemala)",
-        description=(
-            "Un comerciante intenta registrar como marca un símbolo sagrado de la cosmovisión maya "
-            "para vender productos textiles. La comunidad considera que el uso es ofensivo y contrario "
-            "al orden público."
-        ),
-        questions=[
-            Question(
-                text=(
-                    "Un símbolo sagrado no tiene protección marcaria si no existe una prohibición explícita en la ley "
-                    "de marcas, por lo tanto cualquier persona puede registrarlo como marca."
-                ),
-                correct=False,
-                keywords=["símbolo", "sagrado", "orden público", "marca"]
-            ),
-            Question(
-                text=(
-                    "La comunidad maya puede pedir la nulidad del registro por considerarlo contrario a las buenas costumbres "
-                    "y al orden público."
-                ),
-                correct=True,
-                keywords=["nulidad", "buenas costumbres", "orden público", "comunidad"]
-            ),
-        ]
-    ),
-    3: Case(
-        case_id=3,
-        title="Recursos Genéticos y Biopiratería (México)",
-        description=(
-            "Una empresa japonesa obtuvo una patente sobre un microorganismo aislado de un cenote mexicano. "
-            "México no fue consultado ni compensado. Se analiza la validez de la patente y la posibilidad de "
-            "reclamar derechos."
-        ),
-        questions=[
-            Question(
-                text=(
-                    "México tiene derecho automático a una compensación económica por la patente concedida en Japón solo "
-                    "por el hecho de que el recurso genético se originó en México."
-                ),
-                correct=False,
-                keywords=["compensación", "recurso genético", "México", "patente"]
-            ),
-            Question(
-                text=(
-                    "México puede impugnar la patente en Japón si demuestra que el microorganismo no es novedoso "
-                    "y que su uso estaba documentado en conocimientos tradicionales."
-                ),
-                correct=True,
-                keywords=["impugnar", "novedoso", "conocimientos tradicionales", "México"]
-            ),
-        ]
-    ),
-    4: Case(
-        case_id=4,
-        title="Protección Preventiva y Nombres Geográficos (Guatemala)",
-        description=(
-            "Un tercero registró como dominio .gt el nombre de un sitio arqueológico reconocido, con el "
-            "objetivo de monetizar la reputación del patrimonio cultural. El Ministerio de Cultura pretende intervenir."
-        ),
-        questions=[
-            Question(
-                text=(
-                    "El Ministerio de Cultura no puede solicitar la cancelación del dominio porque no posee un "
-                    "derecho de propiedad intelectual sobre el nombre."
-                ),
-                correct=False,
-                keywords=["Ministerio de Cultura", "cancelación", "dominio", "patrimonio"]
-            ),
-            Question(
-                text=(
-                    "Registrar un dominio que reproduce el nombre de un sitio arqueológico para beneficio propio "
-                    "puede considerarse una práctica desleal."
-                ),
-                correct=True,
-                keywords=["práctica desleal", "dominio", "patrimonio", "cultural"]
-            ),
-        ]
-    ),
-    5: Case(
-        case_id=5,
-        title="Tratado Internacional y Conocimientos Tradicionales (Guatemala)",
-        description=(
-            "Una empresa extranjera solicitó patente en Guatemala antes de la entrada en vigor del nuevo Tratado de la "
-            "OMPI sobre PI, Recursos Genéticos y Conocimientos Tradicionales. La solicitud no menciona el origen "
-            "ni consentimiento."
-        ),
-        questions=[
-            Question(
-                text=(
-                    "La entrada en vigor del nuevo Tratado de la OMPI hace obligatoria la divulgación del origen "
-                    "incluso para solicitudes anteriores a su vigencia."
-                ),
-                correct=False,
-                keywords=["Tratado", "divulgación", "solicitud", "vigencia"]
-            ),
-            Question(
-                text=(
-                    "El Estado de Guatemala puede exigir compensación a pesar de que la solicitud no mencione el origen "
-                    "ni consentimiento, basándose en principios de equidad y justicia."
-                ),
-                correct=True,
-                keywords=["compensación", "equidad", "justicia", "Guatemala"]
-            ),
-        ]
-    ),
-}
+    print(f"📊 Puntuación final: {total_score}/10")
+    return total_score, scores
 
 
 ###############################################################################
@@ -727,139 +544,108 @@ def start_exam() -> str:
 
 @app.route('/exam')
 def take_comprehensive_exam() -> str:
-    """
-    Display all 5 cases with their questions in a single comprehensive exam.
-    """
+    """Display all 5 NFT cases with their questions in a single comprehensive exam."""
     if 'student_name' not in session or 'student_carne' not in session:
-        flash("Debe registrarse primero")
+        flash("Debe registrar sus datos primero")
         return redirect(url_for('index'))
     
-    # Test Claude API on first load
-    print("\n=== TESTING CLAUDE API ===")
-    claude_working = test_claude_api()
-    print("=========================\n")
-    
-    # Generate rephrased questions for all cases
+    # Prepare all cases with potentially paraphrased questions
     all_cases_data = []
+    
     for case_id, case in CASES.items():
-        print(f"\n--- Procesando Caso {case_id} ---")
-        rephrased_questions = []
-        for idx, q in enumerate(case.questions):
-            print(f"Pregunta {idx + 1} original: {q.text[:80]}...")
-            rephrased = q.rephrased()
-            print(f"Pregunta {idx + 1} final: {rephrased[:80]}...")
-            rephrased_questions.append(rephrased)
+        case_questions = []
+        for question in case.questions:
+            # Try to get paraphrased question, fallback to original
+            paraphrased = call_claude(question.text)
+            final_question_text = paraphrased if paraphrased else question.get_text()
+            case_questions.append(final_question_text)
         
         all_cases_data.append({
             'case': case,
-            'questions': rephrased_questions
+            'questions': case_questions
         })
     
     return render_template(
         'comprehensive_exam.html',
         all_cases_data=all_cases_data,
         student_name=session.get('student_name'),
-        student_carne=session.get('student_carne'),
-        session_id=session['student_session']
+        student_carne=session.get('student_carne')
     )
-    
-@app.route('/log_event', methods=['POST'])
-def log_event() -> str:
-    """
-    Receive a frontend log event. Events include 'start_question', 'end_question'
-    and 'paste'. Logs are stored in the ``events`` table. The payload must
-    include a ``session_id`` corresponding to the current student session.
-    The server defers committing the result_id until a test is submitted;
-    interim logs are temporarily stored in the session.
-    """
-    data = request.get_json(silent=True) or {}
-    event_type = data.get('event_type')
-    details = data.get('details', '')
-    timestamp = datetime.utcnow().isoformat()
-    # Append to session logs for later association
-    logs = session.setdefault('pending_events', [])
-    logs.append({
-        'event_type': event_type,
-        'timestamp': timestamp,
-        'details': details,
-    })
-    session['pending_events'] = logs
-    return 'ok'
 
 
 @app.route('/submit_comprehensive', methods=['POST'])
 def submit_comprehensive() -> str:
-    """
-    Process the comprehensive exam submission for all 5 cases.
-    """
+    """Process comprehensive exam submission."""
     if 'student_name' not in session or 'student_carne' not in session:
-        flash("Sesión expirada")
+        flash("Sesión expirada. Debe registrarse nuevamente.")
         return redirect(url_for('index'))
     
+    timestamp = datetime.now().isoformat()
+    student_name = session.get('student_name')
+    student_carne = session.get('student_carne')
+    student_id = f"{student_carne} - {student_name}"
+    
     # Process all cases
-    all_answers = {}
+    all_answers = []
     total_score = 0.0
-    all_rubric_breakdown = {}
+    paste_penalty = 0.0
+    pending_events = []
     
     for case_id, case in CASES.items():
         case_answers = []
-        case_rubric = []
+        case_score = 0.0
         
-        for idx, q in enumerate(case.questions):
-            field_name = f'case_{case_id}_bool_{idx}'
-            reason_name = f'case_{case_id}_reason_{idx}'
+        for q_index, question in enumerate(case.questions):
+            bool_key = f"case_{case_id}_bool_{q_index}"
+            reason_key = f"case_{case_id}_reason_{q_index}"
             
-            bool_str = request.form.get(field_name, 'false')
-            user_bool = bool_str.lower() == 'true'
-            user_reason = request.form.get(reason_name, '').strip()
+            user_bool_str = request.form.get(bool_key, '').strip()
+            user_reason = request.form.get(reason_key, '').strip()
             
-            # Use AI evaluation for detailed analysis
-            score, breakdown = evaluate_answer_with_ai(
-                user_bool=user_bool,
-                user_reason=user_reason,
-                correct_bool=q.correct,
-                case_context=case.description,
-                question_text=q.text
+            if not user_bool_str or not user_reason:
+                flash(f"Pregunta incompleta en Caso {case_id}")
+                return redirect(url_for('take_comprehensive_exam'))
+            
+            user_bool = user_bool_str.lower() == 'true'
+            
+            # Evaluate answer
+            question_score, breakdown = evaluate_answer_with_ai(
+                user_bool, user_reason, question.correct, case.description, question.text
             )
             
             case_answers.append({
+                'question_text': question.text,
                 'user_bool': user_bool,
                 'user_reason': user_reason,
-                'correct': q.correct,
-                'score': score,
-                'breakdown': breakdown,
+                'correct_bool': question.correct,
+                'score': question_score,
+                'breakdown': breakdown
             })
-            total_score += score
-            case_rubric.append(breakdown)
+            
+            case_score += question_score
         
-        all_answers[case_id] = case_answers
-        all_rubric_breakdown[case_id] = case_rubric
+        all_answers.append({
+            'case': case,
+            'answers': case_answers,
+            'score': case_score
+        })
+        
+        total_score += case_score
     
-    # Apply paste penalties if any were recorded for this session
-    pending_events = session.pop('pending_events', [])
-    paste_events = [ev for ev in pending_events if ev.get('event_type') == 'paste']
-    paste_penalty = len(paste_events) * 0.5  # 0.5 points per paste event
-    total_score = max(total_score - paste_penalty, 0.0)
-    
-    # Save the result to the database
+    # Store in database
     db = get_db()
-    timestamp = datetime.utcnow().isoformat()
-    student_id = f"{session.get('student_carne')} - {session.get('student_name')}"
+    cur = db.cursor()
     
-    # Create a comprehensive answers JSON
-    comprehensive_data = {
-        'student_name': session.get('student_name'),
-        'student_carne': session.get('student_carne'),
-        'all_cases': all_answers
-    }
-    
-    answers_json = json.dumps(comprehensive_data)
-    rubric_json = json.dumps({
-        'all_cases_breakdown': all_rubric_breakdown,
-        'paste_penalty': paste_penalty,
+    answers_json = json.dumps({
+        'student_name': student_name,
+        'student_carne': student_carne,
+        'all_cases': {str(case_data['case'].case_id): {
+            'answers': case_data['answers']
+        } for case_data in all_answers}
     })
     
-    cur = db.cursor()
+    rubric_json = json.dumps({'total_score': total_score, 'paste_penalty': paste_penalty})
+    
     cur.execute(
         "INSERT INTO results (timestamp, student_id, case_id, answers_json, score, rubric_json) VALUES (?, ?, ?, ?, ?, ?)",
         (timestamp, student_id, 0, answers_json, total_score, rubric_json)  # case_id = 0 for comprehensive
@@ -874,10 +660,9 @@ def submit_comprehensive() -> str:
         )
     db.commit()
     
-    # Clear session data tied to this test
+    # Clear session data
     session.pop('student_session', None)
     
-    # Render comprehensive feedback
     return render_template(
         'comprehensive_feedback.html',
         all_cases_data=all_answers,
@@ -889,23 +674,13 @@ def submit_comprehensive() -> str:
     )
 
 
-# Mantener la ruta original para compatibilidad
-@app.route('/test/<int:case_id>', methods=['GET'])
-def take_test(case_id: int) -> str:
-    """Individual case test (for backward compatibility)"""
-    return redirect(url_for('index'))
-
 ###############################################################################
 # Routes for instructors
 ###############################################################################
 
 @app.route('/login', methods=['GET', 'POST'])
 def login() -> str:
-    """
-    Simple login page for instructors. Accepts a POST with ``password`` and
-    establishes a session flag ``instructor`` when the password matches
-    ``INSTRUCTOR_PASSWORD``.
-    """
+    """Login page for instructors. Updated password: 'organismojudicial'"""
     if request.method == 'POST':
         if request.form.get('password') == INSTRUCTOR_PASSWORD:
             session['instructor'] = True
@@ -916,10 +691,7 @@ def login() -> str:
 
 
 def require_instructor(view_func):
-    """
-    Decorator that ensures the current user is logged in as an instructor.
-    Redirects to the login page if not authenticated.
-    """
+    """Decorator that ensures the current user is logged in as an instructor."""
     def wrapped(*args, **kwargs):
         if not session.get('instructor'):
             return redirect(url_for('login'))
@@ -931,20 +703,18 @@ def require_instructor(view_func):
 @app.route('/dashboard')
 @require_instructor
 def dashboard() -> str:
-    """
-    Display a dashboard summarising all results. Each row includes a
-    timestamp, student ID, case title, total score and a link to view
-    details. Basic statistics are also provided.
-    """
+    """Display a dashboard summarizing all results."""
     db = get_db()
     cur = db.cursor()
     cur.execute(
         "SELECT id, timestamp, student_id, case_id, score FROM results ORDER BY timestamp DESC"
     )
     rows = cur.fetchall()
+    
     # Build aggregated statistics
     scores = [row['score'] for row in rows]
     average_score = sum(scores) / len(scores) if scores else 0.0
+    
     return render_template(
         'dashboard.html',
         results=rows,
@@ -961,12 +731,9 @@ def logout() -> str:
 
 
 @app.route('/result/<int:result_id>')
-@require_instructor
+@require_instructor  
 def view_result(result_id: int) -> str:
-    """
-    Show details of a single submission including per‑question scores,
-    justification texts and event logs.
-    """
+    """Show details of a single submission including per-question scores."""
     db = get_db()
     cur = db.cursor()
     cur.execute("SELECT * FROM results WHERE id = ?", (result_id,))
@@ -978,16 +745,15 @@ def view_result(result_id: int) -> str:
         answers_data = json.loads(result['answers_json'])
         rubric_data = json.loads(result['rubric_json'])
         
-        # Check if this is a comprehensive exam (case_id = 0) or individual case
         if result['case_id'] == 0:
-            # Comprehensive exam - new format
+            # Comprehensive exam
             student_name = answers_data.get('student_name', 'N/A')
             student_carne = answers_data.get('student_carne', 'N/A')
             all_cases_answers = answers_data.get('all_cases', {})
             
             # Retrieve event logs
             cur.execute(
-                "SELECT event_type, event_time, details FROM events WHERE result_id = ? ORDER BY event_time",
+                "SELECT event_type, event_time, details FROM events WHERE result_id = ?",
                 (result_id,)
             )
             events = cur.fetchall()
@@ -998,41 +764,31 @@ def view_result(result_id: int) -> str:
                 student_name=student_name,
                 student_carne=student_carne,
                 all_cases_answers=all_cases_answers,
-                rubric=rubric_data,
+                cases=CASES,
                 events=events,
-                cases=CASES
+                total_score=result['score'],
+                paste_penalty=rubric_data.get('paste_penalty', 0)
             )
         else:
-            # Individual case - old format (backward compatibility)
-            answers = answers_data if isinstance(answers_data, list) else []
-            
-            # Retrieve event logs
-            cur.execute(
-                "SELECT event_type, event_time, details FROM events WHERE result_id = ? ORDER BY event_time",
-                (result_id,)
-            )
-            events = cur.fetchall()
-            
+            # Individual case (legacy support)
             return render_template(
                 'result.html',
                 result=result,
-                answers=answers,
-                rubric=rubric_data,
-                events=events,
-                case=CASES.get(result['case_id'])
+                case=CASES.get(result['case_id']),
+                answers_data=answers_data,
+                rubric_data=rubric_data
             )
             
-    except Exception as e:
-        print(f"Error procesando resultado {result_id}: {e}")
-        return f"Error procesando resultado: {str(e)}", 500
+    except json.JSONDecodeError:
+        return "Error: Datos corruptos", 500
+
 
 ###############################################################################
-# Run the app
+# App startup
 ###############################################################################
 
 if __name__ == '__main__':
-    # Create database directory if necessary
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    # Launch the Flask development server for local testing. When
-    # containerised, the command in the Dockerfile starts the app.
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    print("🚀 Iniciando aplicación NFTs y Propiedad Intelectual...")
+    print("🏛️ Organismo Judicial de Guatemala")
+    print("🔐 Password de instructor actualizado")
+    app.run(host='0.0.0.0', port=8000, debug=True)
