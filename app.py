@@ -1,10 +1,3 @@
-"""
-Core server for the NFTs and Intellectual Property examination application.
-Updated for Organismo Judicial de Guatemala with NFT and IP focus.
-Sistema de puntuación: 30 puntos máximo (6 por caso)
-Funcionalidades: Bloqueo temporal, una respuesta por persona, timestamps, penalizaciones
-"""
-
 from __future__ import annotations
 
 import json
@@ -1046,7 +1039,7 @@ app.jinja_env.filters['flatten'] = flatten_filter
 
 if __name__ == '__main__':
     print("Iniciando aplicación NFTs y Propiedad Intelectual...")
-    print("Organismo Judicial de Guatemala")
+    print("LegalTechGT")
     print(f"Password de instructor: {INSTRUCTOR_PASSWORD}")
     print(f"Fecha límite del examen: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
     print(f"Estado del examen: {'BLOQUEADO' if is_exam_blocked() else 'ACTIVO'}")
