@@ -405,12 +405,12 @@ def call_claude(prompt: str) -> Optional[str]:
 
 def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: bool, 
                            case_description: str, question_text: str) -> Tuple[float, Dict]:
-    """Evaluate an answer using AI with detailed rubric. Max 3 points per question (6 per case, 30 total)."""
+    """Evaluate an answer using AI with detailed 9-criteria rubric. Max 3 points per question (6 per case, 30 total)."""
     
     # Truth component (1.5 points)
     truth_score = 1.5 if user_bool == correct_bool else 0.0
     
-    # AI evaluation of argument (1.5 points)
+    # AI evaluation of argument (1.5 points max)
     argument_score = 1.5
     ai_analysis = {}
     feedback = ""
@@ -422,22 +422,99 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
     if CLAUDE_API_KEY:
         try:
             evaluation_prompt = f"""
-            Evalúa esta respuesta jurídica sobre NFTs según criterios específicos (escala 1-3):
-            
-            CASO: {case_description}
-            PREGUNTA: {question_text}
+            SISTEMA DE EVALUACIÓN LEGAL - RÚBRICA ESPECÍFICA NFT Y PROPIEDAD INTELECTUAL
+
+            CONTEXTO DEL CASO: {case_description}
+            PREGUNTA EVALUADA: {question_text}
             RESPUESTA DEL ESTUDIANTE: {user_reason}
-            
-            Evalúa sobre 1.5 puntos considerando:
-            - Aplicación correcta de legislación guatemalteca
-            - Comprensión de conceptos NFT y blockchain
-            - Coherencia argumentativa
-            - Uso apropiado de terminología jurídica
-            
-            Responde SOLO con JSON:
+
+            Evalúa esta respuesta usando la siguiente rúbrica específica (escala 1-5 para cada criterio):
+
+            1. OPINIÓN PROPIA FUNDADA (1-5):
+            1=No presenta opinión o es infundada
+            2=Opinión superficial, sin respaldo normativo/doctrinal
+            3=Opinión con algún respaldo, pero limitado o irrelevante
+            4=Opinión clara y fundamentada en norma, doctrina o jurisprudencia pertinente
+            5=Opinión sólida, argumentada y respaldada con múltiples fuentes relevantes y actuales
+
+            2. VALORES ÉTICOS (1-5):
+            1=Ignora totalmente los aspectos éticos del caso
+            2=Menciona valores de forma tangencial o confusa
+            3=Reconoce valores éticos básicos, sin análisis profundo
+            4=Analiza valores éticos pertinentes y su relación con el caso
+            5=Analiza de forma crítica, equilibrada y profunda los valores éticos, vinculándolos con principios jurídicos y derechos humanos
+
+            3. LENGUAJE Y TERMINOLOGÍA (1-5):
+            1=Uso incorrecto de terminología, lenguaje coloquial inapropiado
+            2=Uso parcial de términos técnicos, con errores
+            3=Lenguaje adecuado pero poco preciso; mezcla términos técnicos y coloquiales
+            4=Lenguaje técnico-jurídico claro y correcto, con terminología adecuada
+            5=Lenguaje jurídico-forense preciso, adaptado al contexto y al público, sin errores
+
+            4. CITAS Y PRECISIÓN NORMATIVA (1-5):
+            1=No cita norma alguna o las cita erróneamente
+            2=Citas incompletas o imprecisas
+            3=Citas correctas pero sin exactitud plena
+            4=Cita correctamente artículos, leyes, tratados o sentencias pertinentes
+            5=Cita exacta y puntual (artículo, inciso, nombre completo de ley o tratado), integrando jurisprudencia y doctrina de forma impecable
+
+            5. ESTRUCTURA Y COHERENCIA (1-5):
+            1=Argumento desorganizado, incoherente o contradictorio
+            2=Estructura débil, con saltos lógicos
+            3=Organización aceptable, con transiciones poco claras
+            4=Estructura lógica, coherente y bien organizada
+            5=Argumentación impecablemente estructurada, con transiciones fluidas y progresión lógica sólida
+
+            6. PROFUNDIDAD Y PERTINENCIA DE LA FUNDAMENTACIÓN (1-5):
+            1=Fundamentación ausente o irrelevante
+            2=Fundamentación parcial, con fuentes poco pertinentes
+            3=Fundamentación aceptable, aunque limitada en alcance o actualidad
+            4=Fundamentación sólida y pertinente con fuentes relevantes y actuales
+            5=Fundamentación exhaustiva, con doctrina, jurisprudencia y normas actualizadas y aplicables
+
+            7. CAPACIDAD CRÍTICA (1-5):
+            1=No hay análisis crítico ni contraste de fuentes
+            2=Contrasta superficialmente una sola fuente
+            3=Identifica algunas diferencias entre fuentes, sin profundizar
+            4=Contrasta y analiza diferencias con sentido crítico
+            5=Contrasta de manera profunda, identifica vacíos, ambigüedades y propone soluciones jurídicas innovadoras
+
+            8. PRESENTACIÓN Y ESTILO (1-5):
+            1=Redacción confusa, con errores graves
+            2=Redacción aceptable pero con errores frecuentes
+            3=Redacción clara pero con errores menores
+            4=Redacción clara, sin errores significativos
+            5=Redacción impecable, sin errores, con formato y estilo de citas uniforme y profesional
+
+            9. INNOVACIÓN Y CREATIVIDAD ARGUMENTATIVA (1-5):
+            1=Argumentación repetitiva, sin originalidad
+            2=Ideas poco desarrolladas o irrelevantes
+            3=Alguna idea novedosa pero sin desarrollo
+            4=Soluciones o enfoques novedosos y bien fundamentados
+            5=Soluciones creativas, interdisciplinarias y viables, respaldadas sólidamente
+
+            INSTRUCCIONES DE RESPUESTA:
+            - Evalúa cada criterio del 1 al 5
+            - Calcula el promedio de los 9 criterios
+            - El score final será: (promedio/5) * 1.5 para obtener máximo 1.5 puntos
+            - Proporciona feedback específico y constructivo
+
+            Responde ÚNICAMENTE en formato JSON válido:
             {{
+                "criterios": {{
+                    "opinion_fundada": X,
+                    "valores_eticos": X,
+                    "lenguaje_terminologia": X,
+                    "citas_precision": X,
+                    "estructura_coherencia": X,
+                    "profundidad_fundamentacion": X,
+                    "capacidad_critica": X,
+                    "presentacion_estilo": X,
+                    "innovacion_creatividad": X
+                }},
+                "promedio_criterios": X.X,
                 "score": X.X,
-                "feedback": "comentario específico y constructivo"
+                "feedback": "Análisis específico y constructivo de la respuesta, destacando fortalezas y áreas de mejora..."
             }}
             """
             
@@ -450,32 +527,82 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
                 },
                 json={
                     'model': 'claude-3-sonnet-20240229',
-                    'max_tokens': 1500,
+                    'max_tokens': 2000,
                     'messages': [{'role': 'user', 'content': evaluation_prompt}]
                 },
-                timeout=15
+                timeout=20
             )
             
             if response.status_code == 200:
                 ai_response = response.json()['content'][0]['text']
+                logger.info(f"AI Response: {ai_response}")
+                
                 try:
                     # Extract JSON from response
                     import re
                     json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
                     if json_match:
                         ai_result = json.loads(json_match.group())
+                        
+                        # Extract detailed criteria
+                        criterios = ai_result.get('criterios', {})
+                        ai_analysis = {
+                            'opinion_fundada': criterios.get('opinion_fundada', 3),
+                            'valores_eticos': criterios.get('valores_eticos', 3),
+                            'lenguaje_terminologia': criterios.get('lenguaje_terminologia', 3),
+                            'citas_precision': criterios.get('citas_precision', 3),
+                            'estructura_coherencia': criterios.get('estructura_coherencia', 3),
+                            'profundidad_fundamentacion': criterios.get('profundidad_fundamentacion', 3),
+                            'capacidad_critica': criterios.get('capacidad_critica', 3),
+                            'presentacion_estilo': criterios.get('presentacion_estilo', 3),
+                            'innovacion_creatividad': criterios.get('innovacion_creatividad', 3),
+                            'promedio_criterios': ai_result.get('promedio_criterios', 3.0)
+                        }
+                        
                         argument_score = min(1.5, max(0.0, ai_result.get('score', 0.75)))
-                        feedback = ai_result.get('feedback', '')
+                        feedback = ai_result.get('feedback', 'Evaluación completada.')
+                        
+                        logger.info(f"AI Analysis successful: score={argument_score}, criteria={ai_analysis}")
+                        
                 except Exception as e:
                     logger.error(f"Error parsing AI evaluation: {e}")
+                    # Default values if parsing fails
                     argument_score = 0.75
-                    
+                    ai_analysis = {
+                        'opinion_fundada': 3,
+                        'valores_eticos': 3,
+                        'lenguaje_terminologia': 3,
+                        'citas_precision': 3,
+                        'estructura_coherencia': 3,
+                        'profundidad_fundamentacion': 3,
+                        'capacidad_critica': 3,
+                        'presentacion_estilo': 3,
+                        'innovacion_creatividad': 3,
+                        'promedio_criterios': 3.0
+                    }
+                    feedback = "Error en evaluación automática. Puntuación asignada por defecto."
+            else:
+                logger.error(f"AI API Error: {response.status_code}")
+                argument_score = 0.75
+                
         except Exception as e:
             logger.error(f"Error evaluating with AI: {e}")
             argument_score = 0.75
     else:
         # Basic evaluation without AI
         argument_score = 0.75 if len(user_reason.strip()) >= 50 else 0.25
+        ai_analysis = {
+            'opinion_fundada': 3,
+            'valores_eticos': 3,
+            'lenguaje_terminologia': 3,
+            'citas_precision': 3,
+            'estructura_coherencia': 3,
+            'profundidad_fundamentacion': 3,
+            'capacidad_critica': 3,
+            'presentacion_estilo': 3,
+            'innovacion_creatividad': 3,
+            'promedio_criterios': 3.0
+        }
     
     # Calculate total score (max 3 points per question)
     total_score = truth_score + argument_score - paste_penalty
@@ -487,7 +614,8 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
         'paste_penalty': paste_penalty,
         'paste_attempts': paste_attempts,
         'copy_attempts': copy_attempts,
-        'feedback': feedback
+        'feedback': feedback,
+        'ai_analysis': ai_analysis
     }
     
     return total_score, breakdown
@@ -816,16 +944,28 @@ def view_result(result_id: int) -> str:
             )
             events = cur.fetchall()
             
+            # CORRECCIÓN: Preparar datos para el template de instructor
+            processed_cases_data = []
+            for case_id_str, case_data in all_cases_answers.items():
+                case_id = int(case_id_str)
+                case_obj = CASES.get(case_id)
+                if case_obj:
+                    processed_cases_data.append({
+                        'case': case_obj,
+                        'answers': case_data.get('answers', []),
+                        'score': case_data.get('score', 0)
+                    })
+            
             return render_template(
-                'result.html',
-                result=result,
-                all_cases_answers=all_cases_answers,
+                'instructor_comprehensive_result.html',  # Template específico para instructor
+                all_cases_data=processed_cases_data,
                 cases=CASES,
                 total_score=result['score'],
                 events=events,
                 student_name=student_name,
                 student_carne=student_carne,
                 rubric_data=rubric_data,
+                result=result,
                 max_score=30.0
             )
         else:

@@ -180,56 +180,6 @@
     </div>
 </div>
 
-<!-- Casos de Estudio -->
-<div class="section-header mb-4" data-animate="fade-up">
-    <h2 class="section-title">
-        <i class="fas fa-gavel me-2"></i>
-        Casos de Estudio Incluidos
-    </h2>
-    <p class="section-subtitle">Situaciones jurídicas reales en el contexto guatemalteco</p>
-</div>
-
-<div class="accordion mb-5" id="casesAccordion">
-    {% for case_id, case in cases.items() %}
-    <div class="accordion-item" data-animate="fade-up">
-        <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case{{ case_id }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="badge badge-primary">{{ case_id }}</div>
-                    <div>
-                        <strong>{{ case.title }}</strong>
-                        <div class="text-muted small mt-1">2 preguntas - 6 puntos máximo</div>
-                    </div>
-                </div>
-            </button>
-        </h2>
-        <div id="case{{ case_id }}" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
-            <div class="accordion-body">
-                <p><strong>Descripción:</strong> {{ case.description }}</p>
-                <div class="mt-3">
-                    <strong>Marco Legal Relevante:</strong>
-                    {% if case_id == 1 %}
-                        <div class="badge badge-outline me-2">Arts. 3, 13 LPI Guatemala</div>
-                        <div class="badge badge-outline">Separación obra-soporte</div>
-                    {% elif case_id == 2 %}
-                        <div class="badge badge-outline me-2">Ley de Firma Electrónica</div>
-                        <div class="badge badge-outline">Smart contracts</div>
-                    {% elif case_id == 3 %}
-                        <div class="badge badge-outline me-2">Art. 9 LPI</div>
-                        <div class="badge badge-outline">Reproducción digital</div>
-                    {% elif case_id == 4 %}
-                        <div class="badge badge-outline me-2">Arts. 16-17 LPI</div>
-                        <div class="badge badge-outline">Comunicación pública</div>
-                    {% elif case_id == 5 %}
-                        <div class="badge badge-outline me-2">Arts. 71, 42 CN</div>
-                        <div class="badge badge-outline">Balance constitucional</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
 
 <!-- Documento de Referencia -->
 <div class="card mb-5" data-animate="fade-up">

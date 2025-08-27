@@ -1,1456 +1,578 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Análisis Detallado - Instructor{% endblock %}
+{% block page_title %}Análisis Detallado del Examen{% endblock %}
+
 {% block content %}
 <div class="instructor-result-container">
-    <!-- Header Section -->
-    <div class="instructor-result-header">
-        <div class="header-content">
-            <h2>📊 Análisis Detallado - NFTs y Propiedad Intelectual</h2>
-            <div class="result-meta">
-                <div class="meta-grid">
-                    <div class="meta-item">
-                        <span class="meta-label">👤 Estudiante:</span>
-                        <span class="meta-value">{{ student_name }}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">🆔 Identificación:</span>
-                        <span class="meta-value">{{ student_carne }}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">📅 Fecha de Examen:</span>
-                        <span class="meta-value">{{ result.timestamp[:19].replace('T', ' ') }}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">🎯 Puntuación Total:</span>
-                        <span class="meta-value score-display">{{ '%.1f'|format(total_score) }}/100</span>
-                    </div>
+    <!-- Header del Resultado -->
+    <div class="instructor-header mb-4" data-animate="fade-up">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-user-graduate me-2"></i>
+                    {{ student_name }}
+                </h2>
+                <div class="student-meta">
+                    <span class="badge badge-light me-2">ID: {{ student_carne }}</span>
+                    <span class="badge badge-info me-2">
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ result.timestamp[:19].replace('T', ' ') }}
+                    </span>
+                    <span class="badge badge-secondary">
+                        <i class="fas fa-clock me-1"></i>
+                        {{ (result.duration_seconds // 60) }} min
+                    </span>
                 </div>
             </div>
-        </div>
-        
-        <div class="instructor-tools">
-            <div class="tool-buttons">
-                <button onclick="exportDetailedReport()" class="btn btn-primary">
-                    📊 Exportar Informe
-                </button>
-                <button onclick="toggleAnalytics()" class="btn btn-secondary">
-                    📈 Analytics
-                </button>
-                <button onclick="window.print()" class="btn btn-secondary">
-                    🖨️ Imprimir
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Performance Summary for Instructor -->
-    <div class="instructor-summary">
-        <h3>🎯 Resumen de Rendimiento</h3>
-        <div class="summary-grid">
-            <div class="summary-card accuracy">
-                <div class="card-icon">⚖️</div>
-                <div class="card-content">
-                    <div class="card-value">{{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('user_bool', 'equalto', all_cases_answers.values() | map('map', attribute='answers') | flatten | map(attribute='correct_bool')) | list | length) }}/10</div>
-                    <div class="card-label">Respuestas Correctas V/F</div>
-                    <div class="card-percentage">{{ ((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('user_bool', 'equalto', all_cases_answers.values() | map('map', attribute='answers') | flatten | map(attribute='correct_bool')) | list | length) / 10 * 100) | round(1) }}%</div>
-                </div>
-            </div>
-            
-            <div class="summary-card argumentation">
-                <div class="card-icon">✍️</div>
-                <div class="card-content">
-                    <div class="card-value">{{ valid_answers_count | default(0) }}/10</div>
-                    <div class="card-label">Argumentaciones Sólidas</div>
-                    <div class="card-percentage">{{ ((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.argument', 'gt', 3) | list | length) / 10 * 100) | round(1) }}%</div>
-                </div>
-            </div>
-            
-            <div class="summary-card nft-comprehension">
-                <div class="card-icon">🔗</div>
-                <div class="card-content">
-                    <div class="card-value">{{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | selectattr('breakdown.ai_analysis.comprension_nft', 'gt', 3) | list | length) }}/10</div>
-                    <div class="card-label">Comprensión NFT</div>
-                    <div class="card-percentage">{{ ((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | selectattr('breakdown.ai_analysis.comprension_nft', 'gt', 3) | list | length) / 10 * 100) | round(1) }}%</div>
-                </div>
-            </div>
-            
-            <div class="summary-card penalties">
-                <div class="card-icon">⚠️</div>
-                <div class="card-content">
-                    <div class="card-value">{{ paste_penalty if paste_penalty > 0 else 0 }}</div>
-                    <div class="card-label">Penalizaciones</div>
-                    <div class="card-percentage">Copy-paste detectado</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Performance Indicators -->
-        {% if paste_penalty > 0 %}
-        <div class="penalty-alert">
-            <div class="alert-icon">🚨</div>
-            <div class="alert-content">
-                <strong>Penalización Aplicada:</strong> Se detectó uso excesivo de copy-paste (-{{ paste_penalty }} puntos). 
-                Esto sugiere que el estudiante no desarrolló sus propias respuestas de manera original.
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Advanced Analytics Toggle -->
-    <div class="analytics-section" id="analytics-section" style="display: none;">
-        <h3>📈 Análisis Avanzado</h3>
-        <div class="analytics-grid">
-            <div class="analytics-card response-quality">
-                <h4>📝 Calidad de Respuestas</h4>
-                <div class="quality-metrics">
-                    <div class="metric-item">
-                        <span class="metric-label">Promedio de palabras:</span>
-                        <span class="metric-value">{{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | map(attribute='user_reason') | map('split') | map('length') | sum / 10) | round(0) }}</span>
+            <div class="col-lg-4 text-lg-end">
+                <div class="score-display">
+                    <div class="total-score {% if total_score >= 18 %}text-success{% elif total_score >= 12 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ '%.1f'|format(total_score) }}/30.0
                     </div>
-                    <div class="metric-item">
-                        <span class="metric-label">Respuestas extensas (>150 chars):</span>
-                        <span class="metric-value">{{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | map(attribute='user_reason') | selectattr('length', 'gt', 150) | list | length) }}/10</span>
-                    </div>
-                </div>
-                <div class="quality-chart" id="response-quality-chart"></div>
-            </div>
-            
-            <div class="analytics-card ai-criteria">
-                <h4>🤖 Criterios IA Promedio</h4>
-                <div class="ai-metrics">
-                    <div class="ai-metric">
-                        <span class="ai-label">🔗 Comprensión NFT:</span>
-                        <div class="ai-bar">
-                            <div class="ai-fill" style="width: {{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | map(attribute='breakdown.ai_analysis.comprension_nft') | sum / (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | list | length) / 5 * 100) if (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | list | length) > 0 else 0 }}%"></div>
-                        </div>
-                        <span class="ai-score">{{ '%.1f'|format((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | map(attribute='breakdown.ai_analysis.comprension_nft') | sum / (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | list | length)) if (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.comprension_nft', 'defined') | list | length) > 0 else 0) }}/5</span>
-                    </div>
-                    <div class="ai-metric">
-                        <span class="ai-label">⚖️ Aplicación Normativa:</span>
-                        <div class="ai-bar">
-                            <div class="ai-fill" style="width: {{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.aplicacion_normativa', 'defined') | map(attribute='breakdown.ai_analysis.aplicacion_normativa') | sum / (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.aplicacion_normativa', 'defined') | list | length) / 5 * 100) if (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.aplicacion_normativa', 'defined') | list | length) > 0 else 0 }}%"></div>
-                        </div>
-                        <span class="ai-score">{{ '%.1f'|format((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.aplicacion_normativa', 'defined') | map(attribute='breakdown.ai_analysis.aplicacion_normativa') | sum / (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.aplicacion_normativa', 'defined') | list | length)) if (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.aplicacion_normativa', 'defined') | list | length) > 0 else 0) }}/5</span>
-                    </div>
-                    <div class="ai-metric">
-                        <span class="ai-label">📱 Smart Contracts:</span>
-                        <div class="ai-bar">
-                            <div class="ai-fill" style="width: {{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.smart_contracts', 'defined') | map(attribute='breakdown.ai_analysis.smart_contracts') | sum / (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.smart_contracts', 'defined') | list | length) / 5 * 100) if (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.smart_contracts', 'defined') | list | length) > 0 else 0 }}%"></div>
-                        </div>
-                        <span class="ai-score">{{ '%.1f'|format((all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.smart_contracts', 'defined') | map(attribute='breakdown.ai_analysis.smart_contracts') | sum / (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.smart_contracts', 'defined') | list | length)) if (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown.ai_analysis.smart_contracts', 'defined') | list | length) > 0 else 0) }}/5</span>
+                    <div class="score-percentage">
+                        {{ '%.1f'|format((total_score / 30.0) * 100) }}%
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Detailed Case Analysis -->
-    {% for case_id, case_data in all_cases_answers.items() %}
-    <div class="case-detail">
-        <div class="case-detail-header">
-            <div class="case-info">
-                <div class="case-number">{{ case_id }}</div>
-                <div class="case-title-info">
-                    <h3>{{ cases[case_id|int].title }}</h3>
-                    <div class="case-meta">
-                        <span class="case-type">🔗 Caso NFT</span>
-                        <span class="case-score">{{ '%.1f'|format(case_data.answers | map(attribute='score') | sum) }}/20 puntos</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="case-actions">
-                <button onclick="toggleCaseDetails('case_{{ case_id }}')" class="btn btn-outline">
-                    <span class="toggle-text">Ver Detalles</span>
-                    <span class="toggle-icon">▼</span>
-                </button>
-            </div>
-        </div>
-        
-        <div class="case-description">
-            <strong>📋 Descripción del Caso:</strong>
-            <p>{{ cases[case_id|int].description }}</p>
-        </div>
-        
-        <div class="case-details" id="case_{{ case_id }}" style="display: none;">
-            {% for answer in case_data.answers %}
-            <div class="question-detail">
-                <div class="question-detail-header">
-                    <h4>Pregunta {{ loop.index }}</h4>
-                    <div class="question-score {{ 'score-high' if answer.score >= 8 else 'score-medium' if answer.score >= 6 else 'score-low' }}">
-                        {{ '%.1f'|format(answer.score) }}/10
-                    </div>
-                </div>
-                
-                <!-- Original Question -->
-                <div class="original-question">
-                    <strong>❓ Afirmación:</strong>
-                    <p>{{ answer.question_text }}</p>
-                </div>
-                
-                <!-- Answer Analysis -->
-                <div class="answer-analysis">
-                    <div class="answer-comparison">
-                        <div class="student-response {{ 'correct' if answer.user_bool == answer.correct_bool else 'incorrect' }}">
-                            <div class="response-label">👤 Estudiante:</div>
-                            <div class="response-value">
-                                {{ 'Verdadero' if answer.user_bool else 'Falso' }}
+    <!-- Resumen Estadístico -->
+    <div class="stats-summary mb-4" data-animate="fade-up">
+        <div class="row">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stat-card">
+                    <div class="stat-value text-primary">
+                        {% set correct_count = 0 %}
+                        {% for case_data in all_cases_data %}
+                            {% for answer in case_data.answers %}
                                 {% if answer.user_bool == answer.correct_bool %}
-                                <span class="result-icon correct">✅</span>
-                                {% else %}
-                                <span class="result-icon incorrect">❌</span>
+                                    {% set correct_count = correct_count + 1 %}
                                 {% endif %}
-                            </div>
-                        </div>
-                        <div class="correct-response">
-                            <div class="response-label">✅ Correcta:</div>
-                            <div class="response-value">
-                                {{ 'Verdadero' if answer.correct_bool else 'Falso' }}
-                            </div>
-                        </div>
+                            {% endfor %}
+                        {% endfor %}
+                        {{ correct_count }}/10
                     </div>
+                    <div class="stat-label">Verdadero/Falso Correcto</div>
                 </div>
-                
-                <!-- Score Breakdown -->
-                <div class="score-breakdown">
-                    <h5>📊 Desglose Detallado</h5>
-                    <div class="breakdown-items">
-                        <div class="breakdown-item {{ 'success' if answer.user_bool == answer.correct_bool else 'error' }}">
-                            <span class="breakdown-label">⚖️ Veracidad:</span>
-                            <span class="breakdown-value">{{ '%.1f'|format(answer.breakdown.truth) }}/5</span>
-                            <div class="breakdown-bar">
-                                <div class="breakdown-fill" style="width: {{ (answer.breakdown.truth / 5) * 100 }}%"></div>
-                            </div>
-                        </div>
-                        <div class="breakdown-item">
-                            <span class="breakdown-label">✍️ Argumentación:</span>
-                            <span class="breakdown-value">{{ '%.1f'|format(answer.breakdown.argument) }}/5</span>
-                            <div class="breakdown-bar">
-                                <div class="breakdown-fill" style="width: {{ (answer.breakdown.argument / 5) * 100 }}%"></div>
-                            </div>
-                        </div>
-                        {% if answer.breakdown.ai_penalty != 0 %}
-                        <div class="breakdown-item penalty">
-                            <span class="breakdown-label">⚠️ Penalizaciones:</span>
-                            <span class="breakdown-value">{{ '%.1f'|format(answer.breakdown.ai_penalty) }}</span>
-                            <div class="penalty-indicator">
-                                {% if answer.breakdown.ai_penalty < -0.5 %}
-                                Penalización significativa
-                                {% else %}
-                                Penalización menor
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Student Justification -->
-                <div class="student-justification">
-                    <h5>✍️ Justificación del Estudiante</h5>
-                    <div class="justification-content">
-                        {{ answer.user_reason }}
-                    </div>
-                    <div class="justification-metrics">
-                        <span class="metric">📏 {{ answer.user_reason|length }} caracteres</span>
-                        <span class="metric">📝 {{ answer.user_reason.split()|length }} palabras</span>
-                        <span class="metric">⏱️ {{ '%.1f'|format(answer.user_reason|length / 200) }} min lectura</span>
-                    </div>
-                </div>
-                
-                <!-- AI Analysis (if available) -->
-                {% if answer.breakdown.ai_analysis and answer.breakdown.ai_analysis.comprension_nft %}
-                <div class="ai-detailed-analysis">
-                    <h5>🤖 Análisis Detallado con IA</h5>
-                    <div class="ai-criteria-detailed">
-                        <div class="criteria-grid">
-                            <div class="criterion-detail">
-                                <div class="criterion-header">
-                                    <span class="criterion-icon">🔗</span>
-                                    <span class="criterion-name">Comprensión NFT</span>
-                                    <span class="criterion-score score-{{ answer.breakdown.ai_analysis.comprension_nft }}">
-                                        {{ answer.breakdown.ai_analysis.comprension_nft }}/5
-                                    </span>
-                                </div>
-                                <div class="criterion-progress">
-                                    <div class="criterion-fill" style="width: {{ (answer.breakdown.ai_analysis.comprension_nft / 5) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="criterion-detail">
-                                <div class="criterion-header">
-                                    <span class="criterion-icon">⚖️</span>
-                                    <span class="criterion-name">Aplicación Normativa</span>
-                                    <span class="criterion-score score-{{ answer.breakdown.ai_analysis.aplicacion_normativa }}">
-                                        {{ answer.breakdown.ai_analysis.aplicacion_normativa }}/5
-                                    </span>
-                                </div>
-                                <div class="criterion-progress">
-                                    <div class="criterion-fill" style="width: {{ (answer.breakdown.ai_analysis.aplicacion_normativa / 5) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="criterion-detail">
-                                <div class="criterion-header">
-                                    <span class="criterion-icon">📱</span>
-                                    <span class="criterion-name">Smart Contracts</span>
-                                    <span class="criterion-score score-{{ answer.breakdown.ai_analysis.smart_contracts }}">
-                                        {{ answer.breakdown.ai_analysis.smart_contracts }}/5
-                                    </span>
-                                </div>
-                                <div class="criterion-progress">
-                                    <div class="criterion-fill" style="width: {{ (answer.breakdown.ai_analysis.smart_contracts / 5) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="criterion-detail">
-                                <div class="criterion-header">
-                                    <span class="criterion-icon">🏛️</span>
-                                    <span class="criterion-name">Marco Constitucional</span>
-                                    <span class="criterion-score score-{{ answer.breakdown.ai_analysis.marco_constitucional }}">
-                                        {{ answer.breakdown.ai_analysis.marco_constitucional }}/5
-                                    </span>
-                                </div>
-                                <div class="criterion-progress">
-                                    <div class="criterion-fill" style="width: {{ (answer.breakdown.ai_analysis.marco_constitucional / 5) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="criterion-detail">
-                                <div class="criterion-header">
-                                    <span class="criterion-icon">🧠</span>
-                                    <span class="criterion-name">Coherencia</span>
-                                    <span class="criterion-score score-{{ answer.breakdown.ai_analysis.coherencia }}">
-                                        {{ answer.breakdown.ai_analysis.coherencia }}/5
-                                    </span>
-                                </div>
-                                <div class="criterion-progress">
-                                    <div class="criterion-fill" style="width: {{ (answer.breakdown.ai_analysis.coherencia / 5) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="criterion-detail">
-                                <div class="criterion-header">
-                                    <span class="criterion-icon">💡</span>
-                                    <span class="criterion-name">Aplicación Práctica</span>
-                                    <span class="criterion-score score-{{ answer.breakdown.ai_analysis.aplicacion_practica }}">
-                                        {{ answer.breakdown.ai_analysis.aplicacion_practica }}/5
-                                    </span>
-                                </div>
-                                <div class="criterion-progress">
-                                    <div class="criterion-fill" style="width: {{ (answer.breakdown.ai_analysis.aplicacion_practica / 5) * 100 }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if answer.breakdown.feedback %}
-                    <div class="ai-feedback-detailed">
-                        <h6>💬 Retroalimentación Específica de IA:</h6>
-                        <div class="feedback-text">
-                            {{ answer.breakdown.feedback }}
-                        </div>
-                        <div class="feedback-tags">
-                            {% if 'NFT' in answer.breakdown.feedback or 'token' in answer.breakdown.feedback %}
-                            <span class="tag nft-tag">🔗 NFT</span>
-                            {% endif %}
-                            {% if 'smart contract' in answer.breakdown.feedback %}
-                            <span class="tag contract-tag">📄 Smart Contract</span>
-                            {% endif %}
-                            {% if 'constitucional' in answer.breakdown.feedback %}
-                            <span class="tag constitutional-tag">🏛️ Constitucional</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                {% else %}
-                <div class="ai-analysis-unavailable">
-                    <div class="unavailable-notice">
-                        <span class="unavailable-icon">🔧</span>
-                        <span class="unavailable-text">Análisis de IA no disponible para esta respuesta</span>
-                    </div>
-                </div>
-                {% endif %}
             </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stat-card">
+                    <div class="stat-value text-info">
+                        {% set avg_argument = 0 %}
+                        {% set total_questions = 0 %}
+                        {% for case_data in all_cases_data %}
+                            {% for answer in case_data.answers %}
+                                {% set avg_argument = avg_argument + answer.breakdown.argument %}
+                                {% set total_questions = total_questions + 1 %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ '%.1f'|format(avg_argument / total_questions if total_questions > 0 else 0) }}
+                    </div>
+                    <div class="stat-label">Prom. Argumentación IA</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stat-card">
+                    <div class="stat-value {% if result.total_penalties > 0 %}text-warning{% else %}text-success{% endif %}">
+                        {{ result.paste_attempts + result.copy_attempts }}
+                    </div>
+                    <div class="stat-label">Intentos Copy/Paste</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stat-card">
+                    <div class="stat-value {% if result.total_penalties > 0 %}text-danger{% else %}text-success{% endif %}">
+                        -{{ '%.2f'|format(result.total_penalties) }}
+                    </div>
+                    <div class="stat-label">Penalizaciones</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Análisis por Caso -->
+    {% for case_data in all_cases_data %}
+    <div class="case-analysis-card mb-4" data-animate="fade-up">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <span class="case-number">{{ loop.index }}</span>
+                    {{ case_data.case.title }}
+                </h4>
+                <div class="case-score-badge {% if case_data.score >= 4.5 %}bg-success{% elif case_data.score >= 3 %}bg-warning{% else %}bg-danger{% endif %}">
+                    {{ '%.1f'|format(case_data.score) }}/6.0
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="case-description mb-4">
+                <h6><i class="fas fa-info-circle me-2"></i>Descripción del Caso</h6>
+                <p class="text-muted">{{ case_data.case.description }}</p>
+            </div>
+
+            <!-- Preguntas del Caso -->
+            {% for answer in case_data.answers %}
+            <div class="question-analysis mb-4">
+                <div class="question-header">
+                    <h6 class="mb-3">
+                        <span class="badge {% if answer.score >= 2.4 %}badge-success{% elif answer.score >= 1.5 %}badge-warning{% else %}badge-danger{% endif %} me-2">
+                            {{ '%.1f'|format(answer.score) }}/3.0
+                        </span>
+                        Pregunta {{ loop.index }}
+                    </h6>
+                </div>
+
+                <!-- Pregunta Original -->
+                <div class="original-question mb-3">
+                    <strong>Enunciado:</strong> {{ answer.question_text }}
+                </div>
+
+                <!-- Análisis de Respuesta -->
+                <div class="row">
+                    <!-- Respuesta del Estudiante -->
+                    <div class="col-lg-6 mb-3">
+                        <div class="student-response-card">
+                            <h6><i class="fas fa-user me-2"></i>Respuesta del Estudiante</h6>
+                            
+                            <!-- Verdadero/Falso -->
+                            <div class="boolean-answer mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Selección:</strong></span>
+                                    <span class="badge {% if answer.user_bool == answer.correct_bool %}badge-success{% else %}badge-danger{% endif %}">
+                                        {{ 'Verdadero' if answer.user_bool else 'Falso' }}
+                                        {% if answer.user_bool == answer.correct_bool %}
+                                            <i class="fas fa-check ms-1"></i>
+                                        {% else %}
+                                            <i class="fas fa-times ms-1"></i>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">
+                                        <strong>Correcto:</strong> {{ 'Verdadero' if answer.correct_bool else 'Falso' }}
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Justificación -->
+                            <div class="justification-text">
+                                <strong>Justificación:</strong>
+                                <div class="bg-light rounded p-3 mt-2">
+                                    <em>"{{ answer.user_reason }}"</em>
+                                </div>
+                                <div class="text-end mt-1">
+                                    <small class="text-muted">
+                                        {{ answer.user_reason|length }} caracteres | 
+                                        {{ answer.user_reason.split()|length }} palabras
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análisis IA Detallado -->
+                    <div class="col-lg-6 mb-3">
+                        <div class="ai-analysis-card">
+                            <h6><i class="fas fa-robot me-2"></i>Análisis IA Detallado</h6>
+                            
+                            <!-- Puntuación General -->
+                            <div class="scoring-summary mb-3">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="score-metric">
+                                            <div class="score-value {% if answer.breakdown.truth == 1.5 %}text-success{% else %}text-danger{% endif %}">
+                                                {{ '%.1f'|format(answer.breakdown.truth) }}
+                                            </div>
+                                            <div class="score-label">Veracidad</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="score-metric">
+                                            <div class="score-value {% if answer.breakdown.argument >= 1.2 %}text-success{% elif answer.breakdown.argument >= 0.8 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ '%.1f'|format(answer.breakdown.argument) }}
+                                            </div>
+                                            <div class="score-label">Argumentación</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Rúbrica Detallada -->
+                            {% if answer.breakdown.ai_analysis %}
+                            <div class="detailed-rubric">
+                                <h6 class="mb-3">Rúbrica Específica (1-5):</h6>
+                                <div class="criteria-grid">
+                                    {% set criteria_names = {
+                                        'opinion_fundada': 'Opinión Fundada',
+                                        'valores_eticos': 'Valores Éticos', 
+                                        'lenguaje_terminologia': 'Lenguaje y Terminología',
+                                        'citas_precision': 'Citas y Precisión',
+                                        'estructura_coherencia': 'Estructura y Coherencia',
+                                        'profundidad_fundamentacion': 'Profundidad Fundamentación',
+                                        'capacidad_critica': 'Capacidad Crítica',
+                                        'presentacion_estilo': 'Presentación y Estilo',
+                                        'innovacion_creatividad': 'Innovación y Creatividad'
+                                    } %}
+                                    
+                                    {% for criterion_key, criterion_name in criteria_names.items() %}
+                                        {% set score = answer.breakdown.ai_analysis.get(criterion_key, 3) %}
+                                        <div class="criterion-item">
+                                            <div class="criterion-header">
+                                                <span class="criterion-name">{{ criterion_name }}</span>
+                                                <span class="criterion-score {% if score >= 4 %}text-success{% elif score >= 3 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ score }}/5
+                                                </span>
+                                            </div>
+                                            <div class="criterion-bar">
+                                                <div class="criterion-fill" style="width: {{ (score / 5) * 100 }}%"></div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="avg-score mt-3">
+                                    <strong>Promedio: {{ '%.1f'|format(answer.breakdown.ai_analysis.get('promedio_criterios', 3.0)) }}/5</strong>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Feedback IA -->
+                            {% if answer.breakdown.feedback %}
+                            <div class="ai-feedback mt-3">
+                                <h6>Feedback Específico:</h6>
+                                <div class="bg-info-subtle rounded p-2">
+                                    <small>{{ answer.breakdown.feedback }}</small>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Penalizaciones -->
+                            {% if answer.breakdown.paste_penalty > 0 %}
+                            <div class="penalties mt-3">
+                                <div class="alert alert-warning py-2">
+                                    <small>
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <strong>Penalización:</strong> -{{ '%.2f'|format(answer.breakdown.paste_penalty) }} puntos 
+                                        ({{ answer.breakdown.paste_attempts }} paste, {{ answer.breakdown.copy_attempts }} copy)
+                                    </small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if not loop.last %}
+                <hr class="my-4">
+            {% endif %}
             {% endfor %}
         </div>
     </div>
     {% endfor %}
 
-    <!-- Event Logs Section -->
+    <!-- Eventos de Interacción -->
     {% if events %}
-    <div class="events-section">
-        <h3>📋 Registro de Eventos</h3>
-        <div class="events-container">
-            <div class="events-header">
-                <span class="event-time-header">⏰ Hora</span>
-                <span class="event-type-header">🔖 Tipo</span>
-                <span class="event-details-header">📝 Detalles</span>
+    <div class="events-section mb-4" data-animate="fade-up">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Registro de Actividad del Examen
+                </h5>
             </div>
-            {% for event in events %}
-            <div class="event-item {{ 'suspicious' if 'paste' in event.event_type.lower() else 'normal' }}">
-                <span class="event-time">{{ event.event_time[11:19] }}</span>
-                <span class="event-type">
-                    {% if 'paste' in event.event_type.lower() %}
-                    📋 Copy-Paste
-                    {% elif 'start' in event.event_type.lower() %}
-                    ▶️ Inicio
-                    {% elif 'end' in event.event_type.lower() %}
-                    ⏹️ Fin
-                    {% else %}
-                    📝 {{ event.event_type }}
-                    {% endif %}
-                </span>
-                <span class="event-details">
-                    {% if event.details %}
-                    {{ event.details }}
-                    {% else %}
-                    Evento estándar de interacción
-                    {% endif %}
-                </span>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hora</th>
+                                <th>Tipo de Evento</th>
+                                <th>Detalles</th>
+                                <th>Análisis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in events %}
+                            <tr {% if 'paste' in event.event_type.lower() or 'copy' in event.event_type.lower() %}class="table-warning"{% endif %}>
+                                <td>
+                                    <small>{{ event.event_time[:19].replace('T', ' ') }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge {% if 'paste' in event.event_type.lower() or 'copy' in event.event_type.lower() %}badge-warning{% else %}badge-light{% endif %}">
+                                        {{ event.event_type }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ event.details or 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    {% if 'paste' in event.event_type.lower() or 'copy' in event.event_type.lower() %}
+                                        <small class="text-warning">⚠️ Posible plagio</small>
+                                    {% else %}
+                                        <small class="text-success">✅ Normal</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            {% endfor %}
-        </div>
-        
-        {% if events | selectattr('event_type', 'search', 'paste') | list | length > 0 %}
-        <div class="events-warning">
-            <div class="warning-icon">⚠️</div>
-            <div class="warning-text">
-                <strong>Actividad Sospechosa Detectada:</strong> 
-                Se registraron {{ events | selectattr('event_type', 'search', 'paste') | list | length }} eventos de copy-paste. 
-                Esto puede indicar que el estudiante copió contenido externo en lugar de redactar respuestas originales.
-            </div>
-        </div>
-        {% endif %}
-    {% else %}
-    <div class="no-events">
-        <div class="no-events-icon">📭</div>
-        <div class="no-events-text">
-            <p>No se registraron eventos de interacción específicos para este examen.</p>
         </div>
     </div>
     {% endif %}
 
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-            ← Volver al Dashboard
-        </a>
-        <button onclick="generateStudentReport()" class="btn btn-primary">
-            📄 Generar Reporte Estudiante
-        </button>
-        <button onclick="exportInstructorData()" class="btn btn-outline">
-            📊 Exportar Datos
-        </button>
+    <!-- Acciones del Instructor -->
+    <div class="instructor-actions text-center" data-animate="fade-up">
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+            </a>
+            <button onclick="window.print()" class="btn btn-outline btn-lg">
+                <i class="fas fa-print me-2"></i>Imprimir Análisis
+            </button>
+            <button onclick="exportToCSV()" class="btn btn-primary btn-lg">
+                <i class="fas fa-download me-2"></i>Exportar Datos
+            </button>
+        </div>
     </div>
 </div>
 
+<!-- Estilos específicos para instructor -->
 <style>
 .instructor-result-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem 1rem;
 }
 
-/* Header Section */
-.instructor-result-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: var(--white);
+.instructor-header {
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    color: white;
     padding: 2rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--shadow);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.instructor-result-header h2 {
-    margin: 0 0 1rem 0;
-    color: var(--white);
-    font-size: 1.8rem;
-}
-
-.meta-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-.meta-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.meta-label {
+.student-meta .badge {
     font-size: 0.9rem;
-    opacity: 0.8;
-}
-
-.meta-value {
-    font-weight: 600;
-    font-size: 1.1rem;
 }
 
 .score-display {
-    font-size: 1.3rem;
-    color: #ffd700;
-}
-
-.instructor-tools {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 1rem;
-}
-
-.tool-buttons {
-    display: flex;
-    gap: 1rem;
-}
-
-.tool-buttons .btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 25px;
-    font-weight: 500;
-}
-
-/* Summary Section */
-.instructor-summary {
-    background: var(--white);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid #e1e8ed;
-}
-
-.instructor-summary h3 {
-    margin: 0 0 1.5rem 0;
-    color: var(--primary-color);
     text-align: center;
 }
 
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.summary-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    border-left: 5px solid;
-    transition: var(--transition);
-}
-
-.summary-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-}
-
-.summary-card.accuracy {
-    background: rgba(39, 174, 96, 0.05);
-    border-left-color: var(--success-color);
-}
-
-.summary-card.argumentation {
-    background: rgba(52, 152, 219, 0.05);
-    border-left-color: var(--secondary-color);
-}
-
-.summary-card.nft-comprehension {
-    background: rgba(156, 39, 176, 0.05);
-    border-left-color: #9c27b0;
-}
-
-.summary-card.penalties {
-    background: rgba(231, 76, 60, 0.05);
-    border-left-color: var(--accent-color);
-}
-
-.card-icon {
+.total-score {
     font-size: 2.5rem;
-    opacity: 0.8;
-}
-
-.card-content {
-    flex: 1;
-}
-
-.card-value {
-    font-size: 2rem;
     font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 0.25rem;
+    line-height: 1;
 }
 
-.card-label {
-    font-weight: 600;
-    color: var(--primary-color);
-    margin-bottom: 0.25rem;
+.score-percentage {
+    font-size: 1.1rem;
+    opacity: 0.9;
 }
 
-.card-percentage {
-    font-size: 0.9rem;
-    color: var(--dark-gray);
-}
-
-/* Penalty Alert */
-.penalty-alert {
-    background: rgba(231, 76, 60, 0.1);
-    border: 2px solid #e74c3c;
-    border-radius: var(--border-radius);
+.stats-summary .stat-card {
+    background: white;
+    border-radius: 8px;
     padding: 1.5rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.alert-icon {
-    font-size: 2rem;
-    color: #e74c3c;
-    flex-shrink: 0;
-}
-
-.alert-content {
-    color: #721c24;
-    line-height: 1.6;
-}
-
-/* Analytics Section */
-.analytics-section {
-    background: var(--white);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid #e1e8ed;
-}
-
-.analytics-section h3 {
-    margin: 0 0 1.5rem 0;
-    color: var(--primary-color);
     text-align: center;
-}
-
-.analytics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-}
-
-.analytics-card {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    border-left: 4px solid var(--secondary-color);
-}
-
-.analytics-card h4 {
-    margin: 0 0 1rem 0;
-    color: var(--primary-color);
-}
-
-/* Quality Metrics */
-.quality-metrics {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.metric-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #e1e8ed;
-}
-
-.metric-label {
-    font-weight: 500;
-    color: var(--primary-color);
-}
-
-.metric-value {
-    font-weight: 600;
-    color: var(--secondary-color);
-}
-
-/* AI Metrics */
-.ai-metrics {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.ai-metric {
-    display: grid;
-    grid-template-columns: 1fr 2fr auto;
-    gap: 1rem;
-    align-items: center;
-}
-
-.ai-label {
-    font-weight: 500;
-    color: var(--primary-color);
-    font-size: 0.9rem;
-}
-
-.ai-bar {
-    height: 8px;
-    background: #e1e8ed;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.ai-fill {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     height: 100%;
-    background: linear-gradient(90deg, var(--secondary-color), var(--success-color));
-    transition: width 0.3s ease;
 }
 
-.ai-score {
-    font-weight: 600;
-    color: var(--primary-color);
-    min-width: 40px;
-    text-align: right;
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    display: block;
 }
 
-/* Case Details */
-.case-detail {
-    background: var(--white);
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid #e1e8ed;
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.case-analysis-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     overflow: hidden;
 }
 
-.case-detail-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+.case-analysis-card .card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
     padding: 1.5rem;
-    border-bottom: 1px solid #e1e8ed;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.case-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
 }
 
 .case-number {
-    background: var(--secondary-color);
-    color: var(--white);
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    margin-right: 1rem;
+}
+
+.case-score-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    color: white;
+    font-weight: 600;
+}
+
+.student-response-card, .ai-analysis-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    height: 100%;
+}
+
+.ai-analysis-card {
+    background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+}
+
+.boolean-answer {
+    background: white;
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.justification-text .bg-light {
+    border: 1px solid #e9ecef;
+}
+
+.scoring-summary {
+    background: rgba(255,255,255,0.8);
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.score-metric .score-value {
     font-size: 1.5rem;
     font-weight: 700;
 }
 
-.case-title-info h3 {
-    margin: 0 0 0.5rem 0;
-    color: var(--primary-color);
-    font-size: 1.3rem;
-}
-
-.case-meta {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.case-type {
-    background: rgba(156, 39, 176, 0.1);
-    color: #9c27b0;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
+.score-metric .score-label {
     font-size: 0.8rem;
-    font-weight: 500;
+    color: #666;
 }
 
-.case-score {
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.case-actions .btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.toggle-icon {
-    transition: transform 0.3s ease;
-}
-
-.case-actions .btn.active .toggle-icon {
-    transform: rotate(180deg);
-}
-
-.case-description {
-    padding: 1.5rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e1e8ed;
-    color: #495057;
-    line-height: 1.6;
-}
-
-.case-details {
-    transition: all 0.3s ease;
-}
-
-/* Question Details */
-.question-detail {
-    padding: 2rem;
-    border-bottom: 1px solid #e1e8ed;
-}
-
-.question-detail:last-child {
-    border-bottom: none;
-}
-
-.question-detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-.question-detail-header h4 {
-    margin: 0;
-    color: var(--primary-color);
-    font-size: 1.2rem;
-}
-
-.question-score {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    color: var(--white);
-    font-weight: 700;
-    font-size: 1.1rem;
-}
-
-.score-high { background-color: #27ae60; }
-.score-medium { background-color: #f39c12; color: #000; }
-.score-low { background-color: #e74c3c; }
-
-.original-question {
-    background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%);
-    border-left: 4px solid var(--secondary-color);
-    padding: 1.5rem;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    margin-bottom: 1.5rem;
-}
-
-.original-question strong {
-    color: var(--primary-color);
-}
-
-.original-question p {
-    margin: 0.5rem 0 0 0;
-    color: var(--primary-color);
-    line-height: 1.6;
-}
-
-/* Answer Analysis */
-.answer-analysis {
-    margin-bottom: 1.5rem;
-}
-
-.answer-comparison {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-}
-
-.student-response, .correct-response {
+.detailed-rubric {
+    background: rgba(255,255,255,0.9);
+    border-radius: 6px;
     padding: 1rem;
-    border-radius: var(--border-radius);
-    border: 2px solid;
-}
-
-.student-response.correct {
-    border-color: var(--success-color);
-    background: rgba(39, 174, 96, 0.05);
-}
-
-.student-response.incorrect {
-    border-color: var(--accent-color);
-    background: rgba(231, 76, 60, 0.05);
-}
-
-.correct-response {
-    border-color: var(--success-color);
-    background: rgba(39, 174, 96, 0.05);
-}
-
-.response-label {
-    font-weight: 600;
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.response-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.result-icon {
-    font-size: 1.3rem;
-}
-
-.result-icon.correct { color: var(--success-color); }
-.result-icon.incorrect { color: var(--accent-color); }
-
-/* Score Breakdown */
-.score-breakdown {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 1.5rem;
-}
-
-.score-breakdown h5 {
-    margin: 0 0 1rem 0;
-    color: var(--primary-color);
-}
-
-.breakdown-items {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.breakdown-item {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 1rem;
-    align-items: center;
-    padding: 1rem;
-    background: var(--white);
-    border-radius: var(--border-radius);
-    border-left: 4px solid #e1e8ed;
-}
-
-.breakdown-item.success {
-    border-left-color: var(--success-color);
-}
-
-.breakdown-item.error {
-    border-left-color: var(--accent-color);
-}
-
-.breakdown-item.penalty {
-    border-left-color: var(--warning-color);
-}
-
-.breakdown-label {
-    font-weight: 500;
-    color: var(--primary-color);
-}
-
-.breakdown-value {
-    font-weight: 700;
-    color: var(--primary-color);
-    min-width: 60px;
-    text-align: right;
-}
-
-.breakdown-bar {
-    height: 8px;
-    background: #e1e8ed;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.breakdown-fill {
-    height: 100%;
-    background: var(--secondary-color);
-    transition: width 0.3s ease;
-}
-
-.penalty-indicator {
-    font-size: 0.85rem;
-    color: var(--warning-color);
-    font-weight: 500;
-}
-
-/* Student Justification */
-.student-justification {
-    margin-bottom: 1.5rem;
-}
-
-.student-justification h5 {
-    margin: 0 0 1rem 0;
-    color: var(--primary-color);
-}
-
-.justification-content {
-    background: var(--white);
-    border: 2px solid #e1e8ed;
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    line-height: 1.6;
-    color: #495057;
-    margin-bottom: 1rem;
-}
-
-.justification-metrics {
-    display: flex;
-    gap: 2rem;
-    font-size: 0.9rem;
-    color: var(--dark-gray);
-}
-
-.metric {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-/* AI Detailed Analysis */
-.ai-detailed-analysis {
-    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-    border-left: 5px solid #9c27b0;
-    padding: 1.5rem;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    margin-bottom: 1rem;
-}
-
-.ai-detailed-analysis h5 {
-    margin: 0 0 1rem 0;
-    color: #7b1fa2;
 }
 
 .criteria-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: 0.5rem;
 }
 
-.criterion-detail {
-    background: rgba(255,255,255,0.7);
-    padding: 1rem;
-    border-radius: var(--border-radius);
+.criterion-item {
+    background: white;
+    border-radius: 4px;
+    padding: 0.75rem;
 }
 
 .criterion-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: between;
     align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.criterion-icon {
-    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
 }
 
 .criterion-name {
     flex: 1;
+    font-size: 0.85rem;
     font-weight: 500;
-    color: var(--primary-color);
-    margin: 0 1rem;
-    font-size: 0.9rem;
 }
 
 .criterion-score {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    color: var(--white);
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
-.criterion-progress {
-    height: 6px;
-    background: rgba(0,0,0,0.1);
-    border-radius: 3px;
+.criterion-bar {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
     overflow: hidden;
 }
 
 .criterion-fill {
     height: 100%;
-    background: var(--secondary-color);
+    background: #3498db;
     transition: width 0.3s ease;
 }
 
-/* AI Feedback */
-.ai-feedback-detailed {
-    background: rgba(255,255,255,0.8);
-    border-radius: var(--border-radius);
+.ai-feedback {
+    background: rgba(255,255,255,0.9);
+    border-radius: 6px;
     padding: 1rem;
-    margin-top: 1rem;
 }
 
-.ai-feedback-detailed h6 {
-    margin: 0 0 0.75rem 0;
-    color: #7b1fa2;
-}
-
-.feedback-text {
-    color: #4a148c;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-}
-
-.feedback-tags {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.tag {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.nft-tag { background: rgba(156, 39, 176, 0.1); color: #9c27b0; }
-.contract-tag { background: rgba(52, 152, 219, 0.1); color: #3498db; }
-.constitutional-tag { background: rgba(39, 174, 96, 0.1); color: #27ae60; }
-
-/* AI Analysis Unavailable */
-.ai-analysis-unavailable {
-    background: rgba(108, 117, 125, 0.1);
-    border: 2px dashed #6c757d;
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.unavailable-notice {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: var(--dark-gray);
-}
-
-.unavailable-icon {
-    font-size: 1.5rem;
-    opacity: 0.6;
-}
-
-/* Events Section */
 .events-section {
-    background: var(--white);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid #e1e8ed;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.events-section h3 {
-    margin: 0 0 1.5rem 0;
-    color: var(--primary-color);
-    text-align: center;
-}
-
-.events-container {
-    background: #f8f9fa;
-    border-radius: var(--border-radius);
-    overflow: hidden;
-}
-
-.events-header {
-    display: grid;
-    grid-template-columns: 120px 150px 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--primary-color);
-    color: var(--white);
-    font-weight: 600;
-}
-
-.event-item {
-    display: grid;
-    grid-template-columns: 120px 150px 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    border-bottom: 1px solid #e1e8ed;
-    align-items: center;
-}
-
-.event-item:last-child {
-    border-bottom: none;
-}
-
-.event-item.suspicious {
-    background: rgba(231, 76, 60, 0.05);
-    border-left: 4px solid var(--accent-color);
-}
-
-.event-item.normal {
-    background: var(--white);
-}
-
-.event-time {
-    font-family: monospace;
-    font-weight: 500;
-    color: var(--primary-color);
-}
-
-.event-type {
-    font-weight: 500;
-    color: var(--primary-color);
-}
-
-.event-details {
-    color: #495057;
-    font-size: 0.9rem;
-}
-
-/* Events Warning */
-.events-warning {
-    background: rgba(231, 76, 60, 0.1);
-    border: 2px solid #e74c3c;
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-}
-
-.warning-icon {
-    font-size: 2rem;
-    color: #e74c3c;
-    flex-shrink: 0;
-}
-
-.warning-text {
-    color: #721c24;
-    line-height: 1.6;
-}
-
-/* No Events */
-.no-events {
-    text-align: center;
-    padding: 2rem;
-    color: var(--dark-gray);
-}
-
-.no-events-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.6;
-}
-
-.no-events-text p {
-    margin: 0;
-    font-size: 1.1rem;
-}
-
-/* Action Buttons */
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 2rem;
-}
-
-.action-buttons .btn {
-    padding: 1rem 2rem;
-    border-radius: 25px;
-    font-weight: 600;
-}
-
-/* Responsive Design */
 @media (max-width: 768px) {
-    .instructor-result-container {
-        padding: 1rem;
-    }
-    
-    .instructor-result-header {
-        flex-direction: column;
-        gap: 1.5rem;
+    .instructor-header {
         text-align: center;
     }
     
-    .meta-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .tool-buttons {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .summary-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .case-detail-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-    
-    .answer-comparison {
-        grid-template-columns: 1fr;
+    .total-score {
+        font-size: 2rem;
     }
     
     .criteria-grid {
         grid-template-columns: 1fr;
     }
-    
-    .events-header,
-    .event-item {
-        grid-template-columns: 80px 100px 1fr;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .action-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .action-buttons .btn {
-        width: 100%;
-        max-width: 300px;
-    }
-}
-
-/* Print Styles */
-@media print {
-    .instructor-tools,
-    .action-buttons {
-        display: none;
-    }
-    
-    .instructor-result-container {
-        box-shadow: none;
-    }
-    
-    .case-detail,
-    .instructor-summary,
-    .events-section {
-        box-shadow: none;
-        border: 1px solid #ccc;
-    }
 }
 </style>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📊 Instructor result view initialized');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Vista de instructor cargada correctamente');
     
-    // Initialize analytics if needed
-    initializeAnalytics();
-});
-
-function toggleCaseDetails(caseId) {
-    const details = document.getElementById(caseId);
-    const button = document.querySelector(`[onclick="toggleCaseDetails('${caseId}')"]`);
-    
-    if (details.style.display === 'none' || details.style.display === '') {
-        details.style.display = 'block';
-        button.innerHTML = '<span class="toggle-text">Ocultar Detalles</span><span class="toggle-icon">▲</span>';
-        button.classList.add('active');
-    } else {
-        details.style.display = 'none';
-        button.innerHTML = '<span class="toggle-text">Ver Detalles</span><span class="toggle-icon">▼</span>';
-        button.classList.remove('active');
-    }
-}
-
-function toggleAnalytics() {
-    const analytics = document.getElementById('analytics-section');
-    const button = event.target;
-    
-    if (analytics.style.display === 'none' || analytics.style.display === '') {
-        analytics.style.display = 'block';
-        button.textContent = '📈 Ocultar Analytics';
-    } else {
-        analytics.style.display = 'none';
-        button.textContent = '📈 Analytics';
-    }
-}
-
-function initializeAnalytics() {
-    // Initialize any charts or analytics visualizations
-    console.log('📈 Analytics initialized');
-}
-
-function exportDetailedReport() {
-    // Generate detailed report
-    const reportData = {
-        student: '{{ student_name }}',
-        identification: '{{ student_carne }}',
-        date: '{{ result.timestamp[:19] }}',
-        totalScore: {{ total_score }},
-        timestamp: new Date().toISOString()
+    // Función para exportar datos
+    window.exportToCSV = function() {
+        const data = {
+            student: '{{ student_name }}',
+            id: '{{ student_carne }}',
+            total_score: '{{ "%.1f"|format(total_score) }}',
+            timestamp: '{{ result.timestamp }}',
+            duration: '{{ result.duration_seconds }}'
+        };
+        
+        console.log('Exportando datos:', data);
+        alert('Función de exportación en desarrollo');
     };
     
-    // Create downloadable report
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `informe_detallado_${reportData.identification}_NFT_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    console.log('📊 Detailed report exported');
-}
-
-function generateStudentReport() {
-    // Generate a summary report for the student
-    alert('📄 Generando reporte para estudiante...\n\nEsta funcionalidad creará un resumen personalizado con recomendaciones específicas.');
-}
-
-function exportInstructorData() {
-    // Export data for instructor analysis
-    const csvData = [
-        ['Criterio', 'Puntuación', 'Porcentaje'],
-        ['Precisión V/F', '{{ (all_cases_answers.values() | map("map", attribute="answers") | flatten | selectattr("user_bool", "equalto", all_cases_answers.values() | map("map", attribute="answers") | flatten | map(attribute="correct_bool")) | list | length) }}/10', '{{ ((all_cases_answers.values() | map("map", attribute="answers") | flatten | selectattr("user_bool", "equalto", all_cases_answers.values() | map("map", attribute="answers") | flatten | map(attribute="correct_bool")) | list | length) / 10 * 100) | round(1) }}%'],
-        ['Puntuación Total', '{{ "%.1f"|format(total_score) }}/100', '{{ "%.1f"|format(total_score) }}%']
-    ];
-    
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvData.forEach(row => {
-        csvContent += row.join(",") + "\n";
+    // Animaciones de entrada
+    const elements = document.querySelectorAll('[data-animate="fade-up"]');
+    elements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.6s ease-out';
+        
+        setTimeout(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, index * 200);
     });
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `datos_instructor_{{ student_carne }}_NFT.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    console.log('📊 Instructor data exported');
-}
+});
 </script>
 {% endblock %}
