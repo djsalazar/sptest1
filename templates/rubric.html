@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}Rúbrica de Evaluación{% endblock %}
+
+{% block content %}
+<div class="card mb-4" data-animate="fade-up">
+    <div class="card-header text-center">
+        <i class="fas fa-clipboard-check fa-3x text-primary mb-3"></i>
+        <h2 class="card-title">Rúbrica de Evaluación</h2>
+        <p class="card-subtitle">Sistema de evaluación integral para NFTs y Propiedad Intelectual</p>
+    </div>
+</div>
+
+<!-- Estructura del Examen -->
+<div class="card mb-4" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-chart-bar me-2"></i>
+            Estructura del Examen
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row text-center mb-4">
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-primary">5</div>
+                    <div class="metric-label">Casos de Estudio</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-success">10</div>
+                    <div class="metric-label">Preguntas Totales</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-info">6</div>
+                    <div class="metric-label">Puntos por Caso</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-warning">30</div>
+                    <div class="metric-label">Puntos Máximo</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="fas fa-calculator me-2"></i>
+                Sistema de Puntuación por Pregunta (3 puntos máximo)
+            </h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge badge-success me-3">1.5 pts</div>
+                        <div>
+                            <strong>Veracidad:</strong><br>
+                            <small class="text-muted">Respuesta correcta (Verdadero/Falso)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge badge-primary me-3">1.5 pts</div>
+                        <div>
+                            <strong>Argumentación IA:</strong><br>
+                            <small class="text-muted">Justificación evaluada automáticamente</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge badge-danger me-3">-0.75 pts</div>
+                        <div>
+                            <strong>Penalizaciones:</strong><br>
+                            <small class="text-muted">Por copiar/pegar contenido</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Criterios de Evaluación IA -->
+<div class="card mb-4" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-robot me-2"></i>
+            Criterios de Evaluación con Inteligencia Artificial
+        </h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-4">
+            El sistema evalúa automáticamente la calidad jurídica de sus respuestas considerando:
+        </p>
+        
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">1</div>
+                    <div>
+                        <h6 class="mb-1">Aplicación normativa guatemalteca</h6>
+                        <small class="text-muted">Uso correcto de la Ley de Propiedad Intelectual de Guatemala</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">2</div>
+                    <div>
+                        <h6 class="mb-1">Comprensión de NFTs y blockchain</h6>
+                        <small class="text-muted">Entendimiento técnico y jurídico de tokens no fungibles</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">3</div>
+                    <div>
+                        <h6 class="mb-1">Coherencia argumentativa</h6>
+                        <small class="text-muted">Lógica y estructura clara en la argumentación</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">4</div>
+                    <div>
+                        <h6 class="mb-1">Terminología jurídica apropiada</h6>
+                        <small class="text-muted">Uso correcto de conceptos legales específicos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Anti-Trampa y Políticas -->
+<div class="card mb-4" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-shield-alt me-2"></i>
+            Políticas de Evaluación
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="single-attempt-warning">
+            <h6 class="mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                IMPORTANTE: Solo Un Intento Permitido
+            </h6>
+            <p class="mb-3">
+                Cada estudiante puede completar este examen solamente UNA VEZ. 
+                Una vez enviadas las respuestas, no será posible realizar otro intento.
+            </p>
+            <ul class="mb-0">
+                <li>El sistema identifica estudiantes por nombre e identificación</li>
+                <li>Se registra el tiempo de inicio y finalización</li>
+                <li>Se detectan automáticamente intentos de copiar/pegar</li>
+                <li>Las penalizaciones se aplican por contenido no original</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-warning mt-3">
+            <h6 class="alert-heading">
+                <i class="fas fa-clock me-2"></i>
+                Límite de Tiempo
+            </h6>
+            <p class="mb-0">
+                <strong>Fecha límite:</strong> 27 de Agosto de 2025 a las 23:59 (Hora de Guatemala)<br>
+                Después de esta fecha, el examen estará bloqueado y no se permitirán nuevos intentos.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Casos de Estudio -->
+<div class="section-header mb-4" data-animate="fade-up">
+    <h2 class="section-title">
+        <i class="fas fa-gavel me-2"></i>
+        Casos de Estudio Incluidos
+    </h2>
+    <p class="section-subtitle">Situaciones jurídicas reales en el contexto guatemalteco</p>
+</div>
+
+<div class="accordion mb-5" id="casesAccordion">
+    {% for case_id, case in cases.items() %}
+    <div class="accordion-item" data-animate="fade-up">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case{{ case_id }}">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge badge-primary">{{ case_id }}</div>
+                    <div>
+                        <strong>{{ case.title }}</strong>
+                        <div class="text-muted small mt-1">2 preguntas - 6 puntos máximo</div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+        <div id="case{{ case_id }}" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
+            <div class="accordion-body">
+                <p><strong>Descripción:</strong> {{ case.description }}</p>
+                <div class="mt-3">
+                    <strong>Marco Legal Relevante:</strong>
+                    {% if case_id == 1 %}
+                        <div class="badge badge-outline me-2">Arts. 3, 13 LPI Guatemala</div>
+                        <div class="badge badge-outline">Separación obra-soporte</div>
+                    {% elif case_id == 2 %}
+                        <div class="badge badge-outline me-2">Ley de Firma Electrónica</div>
+                        <div class="badge badge-outline">Smart contracts</div>
+                    {% elif case_id == 3 %}
+                        <div class="badge badge-outline me-2">Art. 9 LPI</div>
+                        <div class="badge badge-outline">Reproducción digital</div>
+                    {% elif case_id == 4 %}
+                        <div class="badge badge-outline me-2">Arts. 16-17 LPI</div>
+                        <div class="badge badge-outline">Comunicación pública</div>
+                    {% elif case_id == 5 %}
+                        <div class="badge badge-outline me-2">Arts. 71, 42 CN</div>
+                        <div class="badge badge-outline">Balance constitucional</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Documento de Referencia -->
+<div class="card mb-5" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-book-open me-2"></i>
+            Documento Base Obligatorio
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-lg-3 text-center mb-3 mb-lg-0">
+                <div class="d-inline-flex align-items-center justify-content-center rounded bg-primary-subtle text-primary" style="width: 100px; height: 120px;">
+                    <i class="fas fa-file-pdf fa-3x"></i>
+                </div>
+            </div>
+            <div class="col-lg-9">
+                <h5 class="mb-2">
+                    "NFTs: Un estudio sobre el alcance de la propiedad intelectual en los tokens no fungibles"
+                </h5>
+                <div class="text-muted mb-3">
+                    <strong>Universidad de Chile - Facultad de Derecho</strong><br>
+                    <strong>Autor:</strong> Estanislao Dufey Ruiz-Tagle<br>
+                    <strong>Profesor Guía:</strong> Santiago Schuster<br>
+                    <strong>Fecha:</strong> Marzo 2024
+                </div>
+                <p class="mb-3">
+                    <strong class="text-warning">LECTURA OBLIGATORIA:</strong> 
+                    Todas las respuestas deben fundamentarse en este documento académico.
+                </p>
+                <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" 
+                   target="_blank" 
+                   class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-2"></i>
+                    Acceder al Documento
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recomendaciones -->
+<div class="alert alert-success" data-animate="fade-up">
+    <h6 class="alert-heading">
+        <i class="fas fa-lightbulb me-2"></i>
+        Recomendaciones para el Examen
+    </h6>
+    <ul class="mb-0">
+        <li><strong>Lea completamente</strong> el documento de referencia antes de iniciar</li>
+        <li><strong>Escriba con sus propias palabras</strong> para evitar penalizaciones por copiar/pegar</li>
+        <li><strong>Justifique cada respuesta</strong> con al menos 50 caracteres de argumentación sólida</li>
+        <li><strong>Use terminología jurídica apropiada</strong> y cite artículos específicos cuando sea relevante</li>
+        <li><strong>Revise cuidadosamente</strong> antes de enviar - no habrá segunda oportunidad</li>
+    </ul>
+</div>
+
+<div class="text-center mt-5" data-animate="fade-up">
+    <a href="{{ url_for('index') }}" class="btn btn-success btn-xl">
+        <i class="fas fa-arrow-left me-2"></i>
+        Regresar al Registro
+    </a>
+</div>
+{% endblock %}

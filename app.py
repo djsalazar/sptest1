@@ -1,8 +1,8 @@
 """
 Core server for the NFTs and Intellectual Property examination application.
-
 Updated for Organismo Judicial de Guatemala with NFT and IP focus.
-Password changed to 'organismojudicial'.
+Sistema de puntuación: 30 puntos máximo (6 por caso)
+Funcionalidades: Bloqueo temporal, una respuesta por persona, timestamps, penalizaciones
 """
 
 from __future__ import annotations
@@ -13,7 +13,8 @@ import random
 import sqlite3
 import string
 import time
-from datetime import datetime
+import hashlib
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -39,6 +40,10 @@ INSTRUCTOR_PASSWORD = "organismojudicial"
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "exam.db"
 
+# Exam deadline (Guatemala timezone GMT-6)
+GUATEMALA_TZ = timezone(timedelta(hours=-6))
+EXAM_DEADLINE = datetime(2025, 8, 27, 23, 59, 0, tzinfo=GUATEMALA_TZ)
+
 # Flask setup
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits, k=32)))
@@ -48,9 +53,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-print(f"🔑 CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
+print(f"CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
 if CLAUDE_API_KEY:
-    print(f"🔑 CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
+    print(f"CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
 
 ###############################################################################
 # Data Models
@@ -269,10 +274,17 @@ def ensure_schema(db: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
             student_id TEXT,
+            student_hash TEXT,
             case_id INTEGER NOT NULL,
             answers_json TEXT NOT NULL,
             score REAL NOT NULL,
-            rubric_json TEXT NOT NULL
+            rubric_json TEXT NOT NULL,
+            start_time TEXT,
+            end_time TEXT,
+            duration_seconds INTEGER,
+            paste_attempts INTEGER DEFAULT 0,
+            copy_attempts INTEGER DEFAULT 0,
+            total_penalties REAL DEFAULT 0
         );
         """
     )
@@ -288,7 +300,71 @@ def ensure_schema(db: sqlite3.Connection) -> None:
         );
         """
     )
+    
+    # Add new columns if they don't exist (migration)
+    try:
+        cursor.execute("ALTER TABLE results ADD COLUMN student_hash TEXT")
+        cursor.execute("ALTER TABLE results ADD COLUMN start_time TEXT")
+        cursor.execute("ALTER TABLE results ADD COLUMN end_time TEXT")
+        cursor.execute("ALTER TABLE results ADD COLUMN duration_seconds INTEGER")
+        cursor.execute("ALTER TABLE results ADD COLUMN paste_attempts INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE results ADD COLUMN copy_attempts INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE results ADD COLUMN total_penalties REAL DEFAULT 0")
+    except sqlite3.OperationalError:
+        # Columns already exist
+        pass
+    
     db.commit()
+
+###############################################################################
+# Utility Functions
+###############################################################################
+
+def get_student_hash(student_name: str, student_carne: str) -> str:
+    """Generate a hash for student identification to prevent duplicate attempts."""
+    combined = f"{student_name.lower().strip()}:{student_carne.strip()}"
+    return hashlib.sha256(combined.encode()).hexdigest()
+
+def is_exam_blocked() -> bool:
+    """Check if exam is blocked due to deadline."""
+    guatemala_now = datetime.now(GUATEMALA_TZ)
+    return guatemala_now > EXAM_DEADLINE
+
+def get_guatemala_time() -> datetime:
+    """Get current time in Guatemala timezone."""
+    return datetime.now(GUATEMALA_TZ)
+
+def has_student_attempted(student_hash: str) -> bool:
+    """Check if student has already attempted the exam."""
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT COUNT(*) FROM results WHERE student_hash = ?", (student_hash,))
+    count = cur.fetchone()[0]
+    return count > 0
+
+def detect_paste_copy_attempts(user_reason: str) -> Tuple[int, int]:
+    """Detect potential copy/paste attempts based on text characteristics."""
+    paste_indicators = 0
+    copy_indicators = 0
+    
+    # Indicators of pasted content
+    if len(user_reason) > 300:  # Very long responses might be pasted
+        paste_indicators += 1
+    
+    # Check for unusual formatting characters
+    if any(char in user_reason for char in ['\u2018', '\u2019', '\u201c', '\u201d', '\u2013', '\u2014']):
+        paste_indicators += 1
+    
+    # Check for multiple consecutive spaces or tabs
+    if '  ' in user_reason or '\t' in user_reason:
+        paste_indicators += 1
+    
+    # Check for academic/formal language patterns that might indicate copying
+    formal_patterns = ['en virtud de', 'por consiguiente', 'no obstante', 'por tanto', 'en consecuencia']
+    if sum(1 for pattern in formal_patterns if pattern in user_reason.lower()) >= 2:
+        copy_indicators += 1
+    
+    return paste_indicators, copy_indicators
 
 ###############################################################################
 # AI Integration Functions
@@ -329,50 +405,39 @@ def call_claude(prompt: str) -> Optional[str]:
 
 def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: bool, 
                            case_description: str, question_text: str) -> Tuple[float, Dict]:
-    """Evaluate an answer using AI with detailed rubric."""
+    """Evaluate an answer using AI with detailed rubric. Max 3 points per question (6 per case, 30 total)."""
     
-    # Truth component (5 points)
-    truth_score = 5.0 if user_bool == correct_bool else 0.0
+    # Truth component (1.5 points)
+    truth_score = 1.5 if user_bool == correct_bool else 0.0
     
-    # AI evaluation of argument (5 points)
-    argument_score = 5.0
+    # AI evaluation of argument (1.5 points)
+    argument_score = 1.5
     ai_analysis = {}
     feedback = ""
-    ai_penalty = 0.0
+    
+    # Detect copy/paste attempts
+    paste_attempts, copy_attempts = detect_paste_copy_attempts(user_reason)
+    paste_penalty = paste_attempts * 0.25 + copy_attempts * 0.5  # Up to 0.75 penalty
     
     if CLAUDE_API_KEY:
         try:
             evaluation_prompt = f"""
-            Evalúa esta respuesta jurídica sobre NFTs según 9 criterios (escala 1-5):
+            Evalúa esta respuesta jurídica sobre NFTs según criterios específicos (escala 1-3):
             
             CASO: {case_description}
             PREGUNTA: {question_text}
             RESPUESTA DEL ESTUDIANTE: {user_reason}
             
-            Criterios a evaluar:
-            1. Aplicación normativa guatemalteca (1-5) - Aplica correctamente la LPI de Guatemala
-            2. Distinción soporte-obra (1-5) - Identifica separación entre soporte digital y obra protegida
-            3. Conocimiento de smart contracts (1-5) - Comprende aspectos jurídicos de contratos inteligentes
-            4. Derechos patrimoniales y morales (1-5) - Diferencia y aplica derechos morales vs. patrimoniales
-            5. Marco constitucional (1-5) - Balancea derechos constitucionales (cultura vs. autor)
-            6. Coherencia argumentativa (1-5) - Presenta argumentos lógicos y coherentes
-            7. Uso de jurisprudencia/doctrina (1-5) - Referencia apropiada a fuentes doctrinales y legales
-            8. Aplicación práctica (1-5) - Conecta teoría con situaciones reales de NFTs
-            9. Capacidad crítica jurídica (1-5) - Análisis crítico y fundamentado
+            Evalúa sobre 1.5 puntos considerando:
+            - Aplicación correcta de legislación guatemalteca
+            - Comprensión de conceptos NFT y blockchain
+            - Coherencia argumentativa
+            - Uso apropiado de terminología jurídica
             
             Responde SOLO con JSON:
             {{
-                "aplicacion_normativa": X,
-                "distincion_soporte_obra": X,
-                "smart_contracts": X,
-                "derechos_patrimoniales_morales": X,
-                "marco_constitucional": X,
-                "coherencia_argumentativa": X,
-                "jurisprudencia_doctrina": X,
-                "aplicacion_practica": X,
-                "capacidad_critica": X,
-                "promedio": X.X,
-                "feedback": "comentario breve"
+                "score": X.X,
+                "feedback": "comentario específico y constructivo"
             }}
             """
             
@@ -399,29 +464,29 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
                     json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
                     if json_match:
                         ai_result = json.loads(json_match.group())
-                        ai_analysis = ai_result
-                        argument_score = ai_result.get('promedio', 2.5) * 5  # Convert to 5-point scale
+                        argument_score = min(1.5, max(0.0, ai_result.get('score', 0.75)))
                         feedback = ai_result.get('feedback', '')
                 except Exception as e:
                     logger.error(f"Error parsing AI evaluation: {e}")
-                    argument_score = 3.0
+                    argument_score = 0.75
                     
         except Exception as e:
             logger.error(f"Error evaluating with AI: {e}")
-            argument_score = 3.0
+            argument_score = 0.75
     else:
         # Basic evaluation without AI
-        argument_score = 3.0 if len(user_reason.strip()) >= 50 else 1.0
+        argument_score = 0.75 if len(user_reason.strip()) >= 50 else 0.25
     
-    # Calculate total score
-    total_score = truth_score + argument_score + ai_penalty
-    total_score = max(0.0, min(10.0, total_score))  # Clamp to 0-10
+    # Calculate total score (max 3 points per question)
+    total_score = truth_score + argument_score - paste_penalty
+    total_score = max(0.0, min(3.0, total_score))
     
     breakdown = {
         'truth': truth_score,
         'argument': argument_score,
-        'ai_penalty': ai_penalty,
-        'ai_analysis': ai_analysis,
+        'paste_penalty': paste_penalty,
+        'paste_attempts': paste_attempts,
+        'copy_attempts': copy_attempts,
         'feedback': feedback
     }
     
@@ -434,11 +499,26 @@ def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: boo
 @app.route('/')
 def index() -> str:
     """Landing page."""
-    return render_template('student_form.html')
+    # Check if exam is blocked
+    if is_exam_blocked():
+        return render_template('exam_blocked.html', deadline=EXAM_DEADLINE)
+    
+    return render_template('student_form.html', 
+                         exam_deadline=EXAM_DEADLINE,
+                         guatemala_time=get_guatemala_time())
+
+@app.route('/rubric')
+def rubric() -> str:
+    """Show exam rubric and evaluation criteria."""
+    return render_template('rubric.html', cases=CASES)
 
 @app.route('/start_exam', methods=['POST'])
 def start_exam() -> str:
     """Process student registration and start exam."""
+    if is_exam_blocked():
+        flash(f"El examen ha expirado. Fecha límite: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
+        return redirect(url_for('index'))
+    
     student_name = request.form.get('student_name', '').strip()
     student_carne = request.form.get('student_carne', '').strip()
     
@@ -446,17 +526,36 @@ def start_exam() -> str:
         flash("Debe completar todos los campos")
         return redirect(url_for('index'))
     
+    # Check for duplicate attempts
+    student_hash = get_student_hash(student_name, student_carne)
+    if has_student_attempted(student_hash):
+        flash("Ya has completado este examen. Solo se permite un intento por estudiante.")
+        return redirect(url_for('index'))
+    
     # Store in session
     session['student_name'] = student_name
     session['student_carne'] = student_carne
+    session['student_hash'] = student_hash
+    session['exam_start_time'] = get_guatemala_time().isoformat()
     
     return redirect(url_for('take_comprehensive_exam'))
 
 @app.route('/comprehensive_exam')
 def take_comprehensive_exam() -> str:
     """Display comprehensive exam with all cases."""
+    if is_exam_blocked():
+        flash(f"El examen ha expirado. Fecha límite: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
+        return redirect(url_for('index'))
+    
     if 'student_name' not in session or 'student_carne' not in session:
         flash("Debe registrar sus datos primero")
+        return redirect(url_for('index'))
+    
+    # Check for duplicate attempts
+    student_hash = session.get('student_hash')
+    if has_student_attempted(student_hash):
+        flash("Ya has completado este examen. Solo se permite un intento por estudiante.")
+        session.clear()
         return redirect(url_for('index'))
     
     # Prepare all cases with potentially paraphrased questions
@@ -479,17 +578,41 @@ def take_comprehensive_exam() -> str:
         'comprehensive_exam.html',
         all_cases_data=all_cases_data,
         student_name=session.get('student_name'),
-        student_carne=session.get('student_carne')
+        student_carne=session.get('student_carne'),
+        exam_deadline=EXAM_DEADLINE
     )
 
 @app.route('/submit_comprehensive', methods=['POST'])
 def submit_comprehensive() -> str:
     """Process comprehensive exam submission."""
+    if is_exam_blocked():
+        flash(f"El examen ha expirado durante su realización. Fecha límite: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
+        return redirect(url_for('index'))
+    
     if 'student_name' not in session or 'student_carne' not in session:
         flash("Sesión expirada. Debe registrarse nuevamente.")
         return redirect(url_for('index'))
     
-    timestamp = datetime.now().isoformat()
+    # Check for duplicate attempts
+    student_hash = session.get('student_hash')
+    if has_student_attempted(student_hash):
+        flash("Ya has completado este examen. Solo se permite un intento por estudiante.")
+        session.clear()
+        return redirect(url_for('index'))
+    
+    # Calculate timing
+    end_time = get_guatemala_time()
+    start_time_str = session.get('exam_start_time')
+    if start_time_str:
+        start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=GUATEMALA_TZ)
+        duration_seconds = int((end_time - start_time).total_seconds())
+    else:
+        start_time = end_time
+        duration_seconds = 0
+    
+    timestamp = end_time.isoformat()
     student_name = session.get('student_name')
     student_carne = session.get('student_carne')
     student_id = f"{student_carne} - {student_name}"
@@ -497,8 +620,9 @@ def submit_comprehensive() -> str:
     # Process all cases
     all_answers = []
     total_score = 0.0
-    paste_penalty = 0.0
-    pending_events = []
+    total_paste_attempts = 0
+    total_copy_attempts = 0
+    total_penalties = 0.0
     
     for case_id, case in CASES.items():
         case_answers = []
@@ -521,6 +645,11 @@ def submit_comprehensive() -> str:
             question_score, breakdown = evaluate_answer_with_ai(
                 user_bool, user_reason, question.correct, case.description, question.text
             )
+            
+            # Accumulate penalties
+            total_paste_attempts += breakdown.get('paste_attempts', 0)
+            total_copy_attempts += breakdown.get('copy_attempts', 0)
+            total_penalties += breakdown.get('paste_penalty', 0)
             
             case_answers.append({
                 'question_text': question.text,
@@ -549,37 +678,55 @@ def submit_comprehensive() -> str:
         'student_name': student_name,
         'student_carne': student_carne,
         'all_cases': {str(case_data['case'].case_id): {
-            'answers': case_data['answers']
+            'answers': case_data['answers'],
+            'score': case_data['score']
         } for case_data in all_answers}
     })
     
-    rubric_json = json.dumps({'total_score': total_score, 'paste_penalty': paste_penalty})
+    rubric_json = json.dumps({
+        'total_score': total_score,
+        'total_penalties': total_penalties,
+        'paste_attempts': total_paste_attempts,
+        'copy_attempts': total_copy_attempts,
+        'max_possible_score': 30.0
+    })
     
     cur.execute(
-        "INSERT INTO results (timestamp, student_id, case_id, answers_json, score, rubric_json) VALUES (?, ?, ?, ?, ?, ?)",
-        (timestamp, student_id, 0, answers_json, total_score, rubric_json)  # case_id = 0 for comprehensive
+        """
+        INSERT INTO results 
+        (timestamp, student_id, student_hash, case_id, answers_json, score, rubric_json, 
+         start_time, end_time, duration_seconds, paste_attempts, copy_attempts, total_penalties) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (timestamp, student_id, student_hash, 0, answers_json, total_score, rubric_json,
+         start_time.isoformat(), end_time.isoformat(), duration_seconds,
+         total_paste_attempts, total_copy_attempts, total_penalties)
     )
     result_id = cur.lastrowid
     
-    # Persist logs
-    for ev in pending_events:
-        cur.execute(
-            "INSERT INTO events (result_id, event_type, event_time, details) VALUES (?, ?, ?, ?)",
-            (result_id, ev['event_type'], ev['timestamp'], ev.get('details', ''))
-        )
+    # Log completion event
+    cur.execute(
+        "INSERT INTO events (result_id, event_type, event_time, details) VALUES (?, ?, ?, ?)",
+        (result_id, 'exam_completed', timestamp, f"Duration: {duration_seconds}s, Penalties: {total_penalties:.2f}")
+    )
+    
     db.commit()
     
     # Clear session data
-    session.pop('student_session', None)
+    session.clear()
     
     return render_template(
         'comprehensive_feedback.html',
         all_cases_data=all_answers,
         cases=CASES,
         total_score=total_score,
-        paste_penalty=paste_penalty,
-        student_name=session.get('student_name'),
-        student_carne=session.get('student_carne')
+        total_penalties=total_penalties,
+        paste_attempts=total_paste_attempts,
+        copy_attempts=total_copy_attempts,
+        duration_minutes=duration_seconds // 60,
+        student_name=student_name,
+        student_carne=student_carne,
+        max_score=30.0
     )
 
 ###############################################################################
@@ -613,14 +760,16 @@ def dashboard() -> str:
     db = get_db()
     cur = db.cursor()
     cur.execute(
-        "SELECT id, timestamp, student_id, case_id, score FROM results ORDER BY timestamp DESC"
+        """SELECT id, timestamp, student_id, case_id, score, duration_seconds, 
+                  paste_attempts, copy_attempts, total_penalties 
+           FROM results ORDER BY timestamp DESC"""
     )
     rows = cur.fetchall()
     
     # Build aggregated statistics
     scores = [row['score'] for row in rows]
     average_score = sum(scores) / len(scores) if scores else 0.0
-    passing_rate = len([s for s in scores if s >= 60]) / len(scores) * 100 if scores else 0.0
+    passing_rate = len([s for s in scores if s >= 18]) / len(scores) * 100 if scores else 0.0  # 60% of 30
     
     return render_template(
         'dashboard.html',
@@ -628,6 +777,9 @@ def dashboard() -> str:
         cases=CASES,
         average_score=average_score,
         passing_rate=passing_rate,
+        exam_deadline=EXAM_DEADLINE,
+        is_exam_blocked=is_exam_blocked(),
+        max_score=30.0
     )
 
 @app.route('/logout')
@@ -672,7 +824,9 @@ def view_result(result_id: int) -> str:
                 total_score=result['score'],
                 events=events,
                 student_name=student_name,
-                student_carne=student_carne
+                student_carne=student_carne,
+                rubric_data=rubric_data,
+                max_score=30.0
             )
         else:
             # Individual exam (legacy)
@@ -681,7 +835,8 @@ def view_result(result_id: int) -> str:
                 result=result,
                 cases=CASES,
                 answers=json.loads(result['answers_json']),
-                events=[]
+                events=[],
+                max_score=30.0
             )
     
     except Exception as e:
@@ -691,24 +846,11 @@ def view_result(result_id: int) -> str:
 @app.route('/info')
 def info():
     """Página de información del sistema."""
-    return render_template('info.html')
+    return render_template('info.html', cases=CASES, exam_deadline=EXAM_DEADLINE)
 
 ###############################################################################
 # Utility Functions and Filters
 ###############################################################################
-
-def flatten_filter(nested_list):
-    """Flatten nested lists for Jinja2 templates."""
-    if not nested_list:
-        return []
-    
-    result = []
-    for item in nested_list:
-        if isinstance(item, (list, tuple)):
-            result.extend(flatten_filter(item))
-        else:
-            result.append(item)
-    return result
 
 def from_json_filter(json_string):
     """Filtro para convertir JSON string a dict en templates"""
@@ -718,19 +860,25 @@ def from_json_filter(json_string):
         return {}
 
 # Register filters
-app.jinja_env.filters['flatten'] = flatten_filter
 app.jinja_env.filters['from_json'] = from_json_filter
 
 @app.context_processor
-def inject_now():
-    return {'now': datetime.now()}
+def inject_globals():
+    return {
+        'now': datetime.now(),
+        'guatemala_time': get_guatemala_time(),
+        'exam_deadline': EXAM_DEADLINE,
+        'is_exam_blocked': is_exam_blocked()
+    }
 
 ###############################################################################
 # App startup
 ###############################################################################
 
 if __name__ == '__main__':
-    print("🚀 Iniciando aplicación NFTs y Propiedad Intelectual...")
-    print("🏛️ Organismo Judicial de Guatemala")
-    print("🔐 Password de instructor: organismojudicial")
+    print("Iniciando aplicación NFTs y Propiedad Intelectual...")
+    print("Organismo Judicial de Guatemala")
+    print(f"Password de instructor: {INSTRUCTOR_PASSWORD}")
+    print(f"Fecha límite del examen: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
+    print(f"Estado del examen: {'BLOQUEADO' if is_exam_blocked() else 'ACTIVO'}")
     app.run(host='0.0.0.0', port=8000, debug=True)
