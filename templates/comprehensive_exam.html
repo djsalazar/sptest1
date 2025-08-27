@@ -1,1768 +1,290 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Examen Integral{% endblock %}
+{% block page_title %}Examen Integral{% endblock %}
+
 {% block content %}
-<div class="exam-container">
-    <!-- Exam Header -->
-    <div class="exam-header">
-        <div class="exam-title-section">
-            <h2>📋 Examen Integral - NFTs y Propiedad Intelectual</h2>
-            <div class="exam-meta">
-                <div class="meta-item">
-                    <span class="meta-label">👤 Participante:</span>
-                    <span class="meta-value">{{ student_name }}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">🆔 Identificación:</span>
-                    <span class="meta-value">{{ student_carne }}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">📅 Fecha:</span>
-                    <span class="meta-value" id="exam-date"></span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">⏰ Inicio:</span>
-                    <span class="meta-value" id="start-time"></span>
-                </div>
+<form method="POST" id="exam-form" action="{{ url_for('submit_comprehensive') }}">
+    <div class="row align-items-center mb-5" data-animate="fade-up">
+        <div class="col-lg-8">
+            <div class="section-header text-start mb-0">
+                <h2 class="section-title">Examen Integral de Evaluación</h2>
+                <p class="section-subtitle">Complete los 5 casos de estudio. Su progreso se guardará automáticamente.</p>
             </div>
         </div>
-        
-        <div class="exam-progress-section">
-            <div class="progress-circle" id="progress-circle">
-                <div class="progress-value">0%</div>
-            </div>
-            <div class="progress-info">
-                <div class="progress-status" id="progress-status">Iniciando examen...</div>
-                <div class="progress-details" id="progress-details">0 de 10 preguntas completadas</div>
+        <div class="col-lg-4">
+            <div class="dashboard-card text-center">
+                <h6 class="text-muted mb-3">Progreso Total</h6>
+                <div class="progress-ring mx-auto" data-progress="0" id="progress-ring">
+                    <svg width="100" height="100" viewBox="0 0 120 120">
+                        <circle class="progress-ring-circle progress-ring-background" stroke-width="10" cx="60" cy="60" r="52"></circle>
+                        <circle class="progress-ring-circle progress-ring-progress" stroke-width="10" cx="60" cy="60" r="52"></circle>
+                    </svg>
+                    <div class="progress-ring-text" id="progress-text">0%</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Reference Document Reminder -->
-    <div class="reference-reminder">
-        <div class="reminder-icon">📚</div>
-        <div class="reminder-content">
-            <h4>Documento de Referencia</h4>
-            <p>Base tus respuestas en el documento: <strong>"NFTs: Un estudio sobre el alcance de la propiedad intelectual en los tokens no fungibles"</strong> - Universidad de Chile</p>
-            <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" 
-               target="_blank" class="quick-reference-btn">
-                🔗 Abrir Documento
-            </a>
-        </div>
-    </div>
-
-    <!-- Exam Instructions -->
-    <div class="exam-instructions">
-        <div class="instructions-header">
-            <h3>📋 Instrucciones del Examen</h3>
-            <button class="instructions-toggle" onclick="toggleInstructions()">
-                <span class="toggle-icon">▼</span> Ver/Ocultar
-            </button>
-        </div>
-        <div class="instructions-content" id="instructions-content">
-            <div class="instructions-grid">
-                <div class="instruction-item">
-                    <span class="instruction-icon">⚖️</span>
-                    <div class="instruction-text">
-                        <strong>Verdadero/Falso:</strong> Para cada afirmación, seleccione si es verdadera o falsa según la legislación guatemalteca
-                    </div>
-                </div>
-                <div class="instruction-item">
-                    <span class="instruction-icon">✍️</span>
-                    <div class="instruction-text">
-                        <strong>Justificación:</strong> Proporcione una justificación jurídica detallada citando artículos específicos y principios
-                    </div>
-                </div>
-                <div class="instruction-item">
-                    <span class="instruction-icon">🔗</span>
-                    <div class="instruction-text">
-                        <strong>NFTs:</strong> Aplique conceptos sobre tokens no fungibles, smart contracts y separación obra-soporte
-                    </div>
-                </div>
-                <div class="instruction-item">
-                    <span class="instruction-icon">🤖</span>
-                    <div class="instruction-text">
-                        <strong>Evaluación IA:</strong> Sus respuestas serán analizadas por 9 criterios especializados en NFTs y PI
-                    </div>
-                </div>
+    {% for case_data in all_cases_data %}
+    <div class="card card-animated-border mb-4" data-animate="fade-up">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary text-white" style="width: 40px; height: 40px; font-weight: 700;">{{ loop.index }}</div>
+                <h5 class="card-title m-0">{{ case_data.case.title }}</h5>
             </div>
-            <div class="warning-box">
-                <strong>⚠️ Importante:</strong> El sistema detecta automáticamente copy-paste y uso de IA. Responda con sus propias palabras basándose en el documento de referencia.
+            <div>
+                <span class="badge badge-light me-2">🔗 NFT</span>
+                <span class="badge badge-info">⚖️ PI</span>
             </div>
         </div>
-    </div>
-
-    <!-- Exam Form -->
-    <form method="post" action="{{ url_for('submit_comprehensive') }}" id="comprehensive-exam-form" novalidate>
-        {% for case_data in all_cases_data %}
-        <div class="case-section" data-case-id="{{ case_data.case.case_id }}">
-            <!-- Case Header -->
-            <div class="case-header">
-                <div class="case-title-section">
-                    <div class="case-number">{{ case_data.case.case_id }}</div>
-                    <div class="case-title-content">
-                        <h3>{{ case_data.case.title }}</h3>
-                        <div class="case-badges">
-                            <span class="nft-badge">🔗 NFT</span>
-                            <span class="pi-badge">⚖️ PI</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="case-progress">
-                    <div class="case-completion" data-case="{{ case_data.case.case_id }}">
-                        <span class="completion-text">0/2</span>
-                        <div class="completion-bar">
-                            <div class="completion-fill"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Case Description -->
-            <div class="case-description">
-                <div class="description-content">
-                    {{ case_data.case.description }}
-                </div>
-                <div class="legal-context">
-                    <strong>🏛️ Marco Legal Aplicable:</strong>
-                    {% if case_data.case.case_id == 1 %}
-                    Arts. 3, 13 Ley de Propiedad Intelectual Guatemala - Separación obra/soporte
-                    {% elif case_data.case.case_id == 2 %}
-                    Ley de Firma Electrónica Avanzada Guatemala - Autonomía de la voluntad contractual
-                    {% elif case_data.case.case_id == 3 %}
-                    Art. 9 LPI - Reproducción y derechos morales/patrimoniales
-                    {% elif case_data.case.case_id == 4 %}
-                    Arts. 16, 17 LPI - Comunicación pública independiente de propiedad del NFT
-                    {% elif case_data.case.case_id == 5 %}
-                    Arts. 71, 42 Constitución Guatemala - Balance cultura vs. protección autor
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Questions -->
+        <div class="card-body">
+            <p class="text-muted">{{ case_data.case.description }}</p>
+            <hr>
             {% for question in case_data.questions %}
-            <div class="question-block" data-question-index="case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                <div class="question-header">
-                    <h4>Caso {{ case_data.case.case_id }} - Afirmación {{ loop.index }}</h4>
-                    <div class="question-status" id="status_case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                        <span class="status-indicator">⏳</span>
-                        <span class="status-text">Pendiente</span>
-                    </div>
+            <div class="mb-4">
+                <h6><strong>Pregunta {{ loop.index }}:</strong> {{ question }}</h6>
+                
+                <!-- === NOMBRES CORREGIDOS PARA BACKEND FLASK === -->
+                <div class="d-flex gap-3 mt-3">
+                    <!-- CORRECCIÓN: Usar los nombres que espera Flask: q_{case_id}_{q_index}_bool -->
+                    <input type="radio" 
+                           name="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_bool" 
+                           value="True" 
+                           class="d-none" 
+                           required 
+                           id="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_true">
+                    <label class="btn btn-outline flex-grow-1" for="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_true">
+                        Verdadero
+                    </label>
+
+                    <input type="radio" 
+                           name="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_bool" 
+                           value="False" 
+                           class="d-none" 
+                           required 
+                           id="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_false">
+                    <label class="btn btn-outline flex-grow-1" for="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_false">
+                        Falso
+                    </label>
                 </div>
-
-                <!-- Question Text -->
-                <div class="question-content">
-                    <div class="question-text">
-                        <div class="question-icon">❓</div>
-                        <div class="question-statement">{{ question }}</div>
-                    </div>
+                
+                <!-- CORRECCIÓN: Textarea con nombre correcto para Flask -->
+                <div class="form-group mt-3">
+                    <textarea class="form-control" 
+                              name="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_reason" 
+                              placeholder="Justifique su respuesta (mínimo 50 caracteres)..." 
+                              required 
+                              minlength="50" 
+                              rows="5"
+                              data-case-id="{{ case_data.case.case_id }}"
+                              data-question-index="{{ loop.index0 }}"></textarea>
+                    <!-- El contador se añadirá aquí por JavaScript -->
                 </div>
-
-                <!-- True/False Selection -->
-                <div class="answer-section">
-                    <div class="boolean-selection">
-                        <div class="selection-header">
-                            <span class="selection-icon">⚖️</span>
-                            <span class="selection-label">Seleccione su respuesta:</span>
-                        </div>
-                        <div class="bool-inputs">
-                            <label class="bool-option true-option">
-                                <input type="radio" 
-                                       name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" 
-                                       value="true" 
-                                       required
-                                       onchange="updateQuestionStatus('case_{{ case_data.case.case_id }}_{{ loop.index0 }}')">
-                                <span class="bool-indicator">✓</span>
-                                <span class="bool-text">Verdadero</span>
-                            </label>
-                            <label class="bool-option false-option">
-                                <input type="radio" 
-                                       name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" 
-                                       value="false" 
-                                       required
-                                       onchange="updateQuestionStatus('case_{{ case_data.case.case_id }}_{{ loop.index0 }}')">
-                                <span class="bool-indicator">✗</span>
-                                <span class="bool-text">Falso</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Justification -->
-                    <div class="justification-section">
-                        <div class="justification-header">
-                            <label for="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" class="justification-label">
-                                <span class="label-icon">✍️</span>
-                                <span class="label-text">Justificación Jurídica:</span>
-                                <span class="required-indicator">*</span>
-                            </label>
-                            <div class="character-counter" id="counter_case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                                <span class="current-count">0</span>/<span class="min-count">50</span> caracteres mínimos
-                            </div>
-                        </div>
-                        
-                        <textarea id="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
-                                  name="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
-                                  rows="6" 
-                                  required 
-                                  class="justification-textarea"
-                                  placeholder="Proporcione una justificación jurídica detallada que incluya:
-- Referencias a artículos específicos de la legislación guatemalteca
-- Análisis de la diferencia entre NFT (soporte) y obra intelectual
-- Aplicación de principios jurídicos sobre tokens no fungibles
-- Consideración del marco constitucional aplicable
-- Fundamentos doctrinales basados en el documento de referencia
-
-Ejemplo de estructura:
-Según el art. X de la LPI de Guatemala... En el caso de los NFTs, es importante distinguir entre el token (soporte digital) y la obra intelectual protegida... Por tanto, la afirmación es [verdadera/falsa] porque..."
-                                  oninput="updateCharacterCount('case_{{ case_data.case.case_id }}_{{ loop.index0 }}'); updateQuestionStatus('case_{{ case_data.case.case_id }}_{{ loop.index0 }}');"
-                                  onblur="analyzeResponseQuality('case_{{ case_data.case.case_id }}_{{ loop.index0 }}')"></textarea>
-                        
-                        <!-- Quality Indicators -->
-                        <div class="quality-indicators" id="quality_case_{{ case_data.case.case_id }}_{{ loop.index0 }}" style="display: none;">
-                            <div class="quality-item" id="length_case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                                <span class="quality-icon">📏</span>
-                                <span class="quality-text">Longitud adecuada</span>
-                                <span class="quality-status">⏳</span>
-                            </div>
-                            <div class="quality-item" id="legal_case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                                <span class="quality-icon">⚖️</span>
-                                <span class="quality-text">Terminología jurídica</span>
-                                <span class="quality-status">⏳</span>
-                            </div>
-                            <div class="quality-item" id="nft_case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                                <span class="quality-icon">🔗</span>
-                                <span class="quality-text">Conceptos NFT</span>
-                                <span class="quality-status">⏳</span>
-                            </div>
-                        </div>
-
-                        <!-- NFT Terminology Helper -->
-                        <div class="terminology-helper">
-                            <details>
-                                <summary>💡 Términos jurídicos sugeridos sobre NFTs</summary>
-                                <div class="terminology-grid">
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'token no fungible')">token no fungible</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'smart contract')">smart contract</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'obra intelectual')">obra intelectual</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'soporte digital')">soporte digital</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'derechos patrimoniales')">derechos patrimoniales</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'comunicación pública')">comunicación pública</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'tokenización')">tokenización</span>
-                                    <span class="term-chip" onclick="insertTerm('case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}', 'blockchain')">blockchain</span>
-                                </div>
-                            </details>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
             {% endfor %}
         </div>
-        {% endfor %}
+    </div>
+    {% endfor %}
 
-        <!-- Submit Section -->
-        <div class="submit-section">
-            <div class="submit-header">
-                <h3>🚀 Finalizar Examen</h3>
-                <div class="submit-progress" id="submit-progress">
-                    <span class="progress-fraction">0/10</span>
-                    <span class="progress-text">preguntas completadas</span>
-                </div>
-            </div>
-            
-            <div class="pre-submit-checks" id="pre-submit-checks">
-                <div class="check-item" id="check-responses">
-                    <span class="check-icon">⏳</span>
-                    <span class="check-text">Verificando respuestas completas...</span>
-                </div>
-                <div class="check-item" id="check-quality">
-                    <span class="check-icon">⏳</span>
-                    <span class="check-text">Analizando calidad de justificaciones...</span>
-                </div>
-                <div class="check-item" id="check-ready">
-                    <span class="check-icon">⏳</span>
-                    <span class="check-text">Sistema listo para evaluación...</span>
-                </div>
-            </div>
-            
-            <div class="submit-actions">
-                <button type="button" 
-                        class="btn btn-secondary btn-review" 
-                        onclick="reviewIncompleteAnswers()">
-                    📋 Revisar Respuestas
-                </button>
-                <button type="submit" 
-                        class="btn btn-success btn-submit" 
-                        id="submit-btn" 
-                        disabled>
-                    <span class="btn-icon">🎯</span>
-                    <span class="btn-text">Enviar Examen Completo</span>
-                </button>
-            </div>
-            
-            <div class="submit-warning">
-                <div class="warning-icon">⚠️</div>
-                <div class="warning-content">
-                    <strong>Importante:</strong> Una vez enviado el examen no podrá realizar modificaciones. 
-                    El sistema analizará automáticamente sus respuestas sobre NFTs y Propiedad Intelectual 
-                    usando inteligencia artificial especializada.
-                </div>
-            </div>
-        </div>
-    </form>
-</div>
+    <div class="text-center mt-5" data-animate="fade-up">
+        <button type="submit" class="btn btn-success btn-xl" id="submit-button" disabled>
+            <i class="fas fa-clock me-2"></i>Complete todas las preguntas
+        </button>
+    </div>
+</form>
 
-<!-- Auto-save Notification -->
-<div class="auto-save-notification" id="auto-save-notification" style="display: none;">
-    <div class="notification-icon">💾</div>
-    <div class="notification-text">Progreso guardado automáticamente</div>
-</div>
-
-<!-- Styles -->
+<!-- Estilos específicos para el examen -->
 <style>
-.exam-container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-
-/* Exam Header */
-.exam-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: var(--white);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--shadow);
-}
-
-.exam-title-section h2 {
-    margin: 0 0 1rem 0;
-    color: var(--white);
-    font-size: 1.8rem;
-}
-
-.exam-meta {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.meta-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.meta-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
-}
-
-.meta-value {
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-/* Progress Section */
-.exam-progress-section {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.progress-circle {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: conic-gradient(#27ae60 0deg, #27ae60 0deg, rgba(255,255,255,0.3) 0deg, rgba(255,255,255,0.3) 360deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.progress-circle::before {
-    content: '';
-    position: absolute;
-    inset: 8px;
-    border-radius: 50%;
-    background: var(--primary-color);
-}
-
-.progress-value {
-    position: relative;
-    z-index: 1;
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: var(--white);
-}
-
-.progress-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.progress-status {
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-.progress-details {
-    opacity: 0.9;
-    font-size: 0.9rem;
-}
-
-/* Reference Reminder */
-.reference-reminder {
-    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
-    border-left: 5px solid var(--success-color);
-    padding: 1.5rem;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    margin-bottom: 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.reminder-icon {
-    font-size: 3rem;
-    opacity: 0.8;
-}
-
-.reminder-content h4 {
-    margin: 0 0 0.5rem 0;
-    color: #155724;
-}
-
-.reminder-content p {
-    margin: 0 0 1rem 0;
-    color: #0f5132;
-}
-
-.quick-reference-btn {
-    background: var(--success-color);
-    color: var(--white);
-    padding: 0.75rem 1.5rem;
-    border-radius: 20px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: var(--transition);
-    display: inline-block;
-}
-
-.quick-reference-btn:hover {
-    background: #218838;
+/* Estilos para botones de radio seleccionados - CORRECCIÓN CRÍTICA */
+input[type="radio"]:checked + label.btn-outline {
+    background-color: var(--theme-5-primary, #3498db) !important;
+    color: white !important;
+    border-color: var(--theme-5-primary, #3498db) !important;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3) !important;
     transform: translateY(-2px);
 }
 
-/* Instructions */
-.exam-instructions {
-    background: var(--white);
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid #e1e8ed;
-    overflow: hidden;
+/* Suavizar transiciones */
+label.btn-outline {
+    transition: all 0.2s ease-in-out !important;
 }
 
-.instructions-header {
-    background: #f8f9fa;
-    padding: 1rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #e1e8ed;
-}
-
-.instructions-header h3 {
-    margin: 0;
-    color: var(--primary-color);
-}
-
-.instructions-toggle {
-    background: none;
-    border: 2px solid var(--secondary-color);
-    color: var(--secondary-color);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: var(--transition);
-    font-weight: 500;
-}
-
-.instructions-toggle:hover {
-    background: var(--secondary-color);
-    color: var(--white);
-}
-
-.toggle-icon {
-    transition: transform 0.3s ease;
-}
-
-.instructions-content {
-    padding: 1.5rem;
-    max-height: 0;
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.instructions-content.show {
-    max-height: 500px;
-}
-
-.instructions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.instruction-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: var(--border-radius);
-}
-
-.instruction-icon {
-    font-size: 1.5rem;
-    opacity: 0.8;
-    flex-shrink: 0;
-}
-
-.instruction-text {
-    line-height: 1.5;
-}
-
-.instruction-text strong {
-    color: var(--primary-color);
-}
-
-.warning-box {
-    background: rgba(231, 76, 60, 0.1);
-    border: 2px solid #e74c3c;
-    border-radius: var(--border-radius);
-    padding: 1rem;
-    color: #721c24;
-    font-weight: 500;
-}
-
-/* Case Sections */
-.case-section {
-    background: var(--white);
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid #e1e8ed;
-    overflow: hidden;
-}
-
-.case-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: var(--white);
-    padding: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.case-title-section {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.case-number {
-    background: rgba(255,255,255,0.2);
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.case-title-content h3 {
-    margin: 0 0 0.5rem 0;
-    color: var(--white);
-    font-size: 1.3rem;
-}
-
-.case-badges {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.nft-badge, .pi-badge {
-    background: rgba(255,255,255,0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.case-progress {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.case-completion {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.completion-text {
-    font-weight: 600;
-    min-width: 30px;
-}
-
-.completion-bar {
-    width: 60px;
-    height: 6px;
-    background: rgba(255,255,255,0.3);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.completion-fill {
-    height: 100%;
-    background: #27ae60;
-    width: 0%;
-    transition: width 0.3s ease;
-}
-
-/* Case Description */
-.case-description {
-    padding: 2rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e1e8ed;
-}
-
-.description-content {
-    font-size: 1.1rem;
-    line-height: 1.7;
-    color: #495057;
-    margin-bottom: 1.5rem;
-}
-
-.legal-context {
-    background: rgba(52, 152, 219, 0.1);
-    border-left: 4px solid var(--secondary-color);
-    padding: 1rem;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    font-size: 0.9rem;
-    color: #0c5460;
-}
-
-.legal-context strong {
-    color: var(--primary-color);
-}
-
-/* Question Blocks */
-.question-block {
-    padding: 2rem;
-    border-bottom: 1px solid #e1e8ed;
-    position: relative;
-}
-
-.question-block:last-child {
-    border-bottom: none;
-}
-
-.question-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.question-header h4 {
-    margin: 0;
-    color: var(--primary-color);
-    font-size: 1.2rem;
-}
-
-.question-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: var(--transition);
-}
-
-.question-status.pending {
-    background: rgba(255, 193, 7, 0.1);
-    color: #856404;
-}
-
-.question-status.partial {
-    background: rgba(255, 152, 0, 0.1);
-    color: #e65100;
-}
-
-.question-status.complete {
-    background: rgba(40, 167, 69, 0.1);
-    color: #155724;
-}
-
-/* Question Content */
-.question-content {
-    margin-bottom: 2rem;
-}
-
-.question-text {
-    background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%);
-    border-left: 5px solid var(--secondary-color);
-    padding: 2rem;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-}
-
-.question-icon {
-    font-size: 2rem;
-    opacity: 0.7;
-    flex-shrink: 0;
-}
-
-.question-statement {
-    font-size: 1.1rem;
-    line-height: 1.6;
-    color: var(--primary-color);
-}
-
-/* Answer Section */
-.answer-section {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 2rem;
-    align-items: start;
-}
-
-/* Boolean Selection */
-.boolean-selection {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    border: 2px solid #e1e8ed;
-}
-
-.selection-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.selection-icon {
-    font-size: 1.2rem;
-}
-
-.bool-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.bool-option {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--white);
-    border: 2px solid #e1e8ed;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: var(--transition);
-    position: relative;
-}
-
-.bool-option:hover {
-    border-color: var(--secondary-color);
-    background: rgba(52, 152, 219, 0.05);
-}
-
-.bool-option input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.bool-option input[type="radio"]:checked + .bool-indicator {
-    background: var(--success-color);
-    color: var(--white);
-    transform: scale(1.1);
-}
-
-.bool-option input[type="radio"]:checked ~ .bool-text {
-    font-weight: 600;
-    color: var(--success-color);
-}
-
-.bool-option.true-option input[type="radio"]:checked + .bool-indicator {
-    background: var(--success-color);
-}
-
-.bool-option.false-option input[type="radio"]:checked + .bool-indicator {
-    background: var(--accent-color);
-}
-
-.bool-indicator {
-    width: 40px;
-    height: 40px;
-    border: 2px solid #e1e8ed;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.2rem;
-    transition: var(--transition);
-}
-
-.bool-text {
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-/* Justification Section */
-.justification-section {
-    background: var(--white);
-    border: 2px solid #e1e8ed;
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-}
-
-.justification-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.justification-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: var(--primary-color);
-    font-size: 1.1rem;
-}
-
-.label-icon {
-    font-size: 1.2rem;
-}
-
-.required-indicator {
-    color: var(--accent-color);
-    font-weight: 700;
-}
-
-.character-counter {
-    font-size: 0.9rem;
-    color: var(--dark-gray);
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.current-count {
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.min-count {
-    font-weight: 600;
-}
-
-.justification-textarea {
-    width: 100%;
-    min-height: 150px;
-    padding: 1rem;
-    border: 2px solid #e1e8ed;
-    border-radius: var(--border-radius);
-    font-family: inherit;
-    font-size: 1rem;
-    line-height: 1.6;
-    resize: vertical;
-    transition: var(--transition);
-}
-
-.justification-textarea:focus {
-    outline: none;
-    border-color: var(--secondary-color);
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-.justification-textarea.error {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-}
-
-.justification-textarea.warning {
-    border-color: var(--warning-color);
-    box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.1);
-}
-
-.justification-textarea.good {
-    border-color: var(--success-color);
-    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-}
-
-/* Quality Indicators */
-.quality-indicators {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: var(--border-radius);
-    border: 1px solid #e1e8ed;
-}
-
-.quality-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 0;
-    font-size: 0.9rem;
-}
-
-.quality-icon {
-    font-size: 1.1rem;
-}
-
-.quality-text {
-    flex: 1;
-    color: var(--primary-color);
-}
-
-.quality-status.good {
-    color: var(--success-color);
-}
-
-.quality-status.warning {
-    color: var(--warning-color);
-}
-
-.quality-status.error {
-    color: var(--accent-color);
-}
-
-/* Terminology Helper */
-.terminology-helper {
-    margin-top: 1rem;
-}
-
-.terminology-helper details {
-    background: #f8f9fa;
-    border-radius: var(--border-radius);
-    border: 1px solid #e1e8ed;
-}
-
-.terminology-helper summary {
-    padding: 1rem;
-    cursor: pointer;
-    font-weight: 500;
-    color: var(--secondary-color);
-}
-
-.terminology-grid {
-    padding: 1rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.term-chip {
-    background: var(--secondary-color);
-    color: var(--white);
-    padding: 0.4rem 0.8rem;
-    border-radius: 15px;
+/* Contador de caracteres */
+.char-counter {
     font-size: 0.85rem;
-    cursor: pointer;
-    transition: var(--transition);
+    margin-top: 0.5rem;
+    text-align: right;
 }
 
-.term-chip:hover {
-    background: #2980b9;
-    transform: translateY(-1px);
+.char-counter.valid {
+    color: #28a745;
 }
 
-/* Submit Section */
-.submit-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 3rem 2rem;
-    margin-top: 2rem;
-    border-radius: var(--border-radius);
-    text-align: center;
-    border: 2px solid #e1e8ed;
+.char-counter.invalid {
+    color: #dc3545;
 }
 
-.submit-header {
-    margin-bottom: 2rem;
+.char-counter.warning {
+    color: #ffc107;
 }
 
-.submit-header h3 {
-    margin: 0 0 1rem 0;
-    color: var(--primary-color);
-    font-size: 1.8rem;
-}
-
-.submit-progress {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 1.1rem;
-}
-
-.progress-fraction {
-    font-weight: 700;
-    color: var(--secondary-color);
-    font-size: 1.3rem;
-}
-
-.pre-submit-checks {
-    background: var(--white);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    border: 1px solid #e1e8ed;
-}
-
-.check-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem 0;
-    font-weight: 500;
-}
-
-.check-item.complete .check-icon {
-    color: var(--success-color);
-}
-
-.check-item.warning .check-icon {
-    color: var(--warning-color);
-}
-
-.submit-actions {
-    display: flex;
-    gap: 2rem;
-    justify-content: center;
-    margin-bottom: 2rem;
-}
-
-.btn-review {
-    padding: 1rem 2rem;
-    border-radius: 25px;
-}
-
-.btn-submit {
-    padding: 1.25rem 3rem;
-    font-size: 1.2rem;
-    border-radius: 25px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-    transition: var(--transition);
-}
-
-.btn-submit:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
-}
-
-.btn-submit:disabled {
-    background: #ddd;
-    color: #999;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.btn-icon {
-    font-size: 1.3rem;
-}
-
-.submit-warning {
-    background: rgba(255, 193, 7, 0.1);
-    border: 2px solid var(--warning-color);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    text-align: left;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.warning-icon {
-    font-size: 1.5rem;
-    color: var(--warning-color);
-    flex-shrink: 0;
-}
-
-.warning-content {
-    color: #856404;
-    line-height: 1.6;
-}
-
-/* Auto-save Notification */
-.auto-save-notification {
-    position: fixed;
-    top: 100px;
-    right: 2rem;
-    background: var(--success-color);
-    color: var(--white);
-    padding: 1rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    z-index: 1000;
-    animation: slideInRight 0.3s ease-out;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .exam-container {
-        padding: 1rem;
-    }
-    
-    .exam-header {
-        flex-direction: column;
-        gap: 2rem;
-        text-align: center;
-    }
-    
-    .exam-meta {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .reference-reminder {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .case-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-    
-    .answer-section {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-    
-    .submit-actions {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .btn-submit,
-    .btn-review {
-        width: 100%;
-        max-width: 300px;
-    }
+/* Progress ring animations */
+.progress-ring-circle {
+    transition: stroke-dashoffset 0.5s ease-in-out;
 }
 </style>
 
-<!-- JavaScript -->
+{% endblock %}
+
+{% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize exam
-    console.log('🚀 Inicializando examen NFT...');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Inicializando sistema de examen...');
     
-    // Set current date and time
-    document.getElementById('exam-date').textContent = new Date().toLocaleDateString('es-GT');
-    document.getElementById('start-time').textContent = new Date().toLocaleTimeString('es-GT');
+    // --- CONFIGURACIÓN ---
+    const MIN_CHARS = 50;
+    const TOTAL_QUESTIONS = {{ all_cases_data|length * 2 }};
+    const form = document.getElementById('exam-form');
+    const submitButton = document.getElementById('submit-button');
+
+    // --- FUNCIÓN: SETUP CONTADOR DE CARACTERES ---
+    function setupCharacterCounter(textarea) {
+        console.log('Configurando contador para:', textarea.name);
+        
+        // Crear el div contador
+        const counterDiv = document.createElement('div');
+        counterDiv.className = 'char-counter invalid';
+        counterDiv.innerHTML = '<span class="current-count">0</span> / ' + MIN_CHARS + ' caracteres mínimos';
+        
+        // Insertarlo después del textarea
+        textarea.parentNode.insertBefore(counterDiv, textarea.nextSibling);
+        
+        // Listener para actualizar contador
+        textarea.addEventListener('input', function() {
+            const count = this.value.length;
+            const span = counterDiv.querySelector('.current-count');
+            span.textContent = count;
+            
+            // Cambiar clase según el conteo
+            counterDiv.classList.remove('valid', 'invalid', 'warning');
+            if (count >= MIN_CHARS) {
+                counterDiv.classList.add('valid');
+            } else if (count > 0) {
+                counterDiv.classList.add('warning');
+            } else {
+                counterDiv.classList.add('invalid');
+            }
+            
+            // Actualizar progreso general
+            updateOverallProgress();
+        });
+    }
+
+    // --- FUNCIÓN: ACTUALIZAR PROGRESO GENERAL ---
+    function updateOverallProgress() {
+        let completedCount = 0;
+        
+        // Contar preguntas completadas
+        const textareas = document.querySelectorAll('textarea[name*="_reason"]');
+        textareas.forEach(textarea => {
+            // Buscar el radio button correspondiente
+            const caseId = textarea.dataset.caseId;
+            const questionIndex = textarea.dataset.questionIndex;
+            const radioName = `q_${caseId}_${questionIndex}_bool`;
+            const radioChecked = document.querySelector(`input[name="${radioName}"]:checked`);
+            
+            // Contar como completada si tiene radio seleccionado Y mínimo de caracteres
+            if (radioChecked && textarea.value.length >= MIN_CHARS) {
+                completedCount++;
+            }
+        });
+
+        // Calcular porcentaje
+        const percentage = Math.round((completedCount / TOTAL_QUESTIONS) * 100);
+        
+        // Actualizar anillo de progreso
+        const progressText = document.getElementById('progress-text');
+        if (progressText) {
+            progressText.textContent = percentage + '%';
+        }
+
+        // Actualizar botón de envío
+        if (completedCount === TOTAL_QUESTIONS) {
+            submitButton.disabled = false;
+            submitButton.classList.remove('btn-secondary');
+            submitButton.classList.add('btn-success');
+            submitButton.innerHTML = '<i class="fas fa-check-double me-2"></i> Finalizar y Enviar Evaluación';
+        } else {
+            submitButton.disabled = true;
+            submitButton.classList.remove('btn-success');
+            submitButton.classList.add('btn-secondary');
+            submitButton.innerHTML = `<i class="fas fa-clock me-2"></i>Complete las preguntas (${completedCount}/${TOTAL_QUESTIONS})`;
+        }
+        
+        console.log(`Progreso: ${completedCount}/${TOTAL_QUESTIONS} (${percentage}%)`);
+    }
+
+    // --- INICIALIZACIÓN ---
     
-    // Initialize progress tracking
+    // Setup contadores para todos los textareas
+    document.querySelectorAll('textarea[name*="_reason"]').forEach(setupCharacterCounter);
+    
+    // Setup listeners para radio buttons
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', updateOverallProgress);
+    });
+    
+    // Listener global para cambios en el formulario
+    form.addEventListener('input', updateOverallProgress);
+    
+    // Validación al enviar
+    form.addEventListener('submit', function(e) {
+        console.log('Enviando formulario...');
+        
+        // Verificación final
+        let missingFields = [];
+        
+        // Verificar cada caso y pregunta
+        {% for case_data in all_cases_data %}
+            {% for question in case_data.questions %}
+                const radio_{{ case_data.case.case_id }}_{{ loop.index0 }} = document.querySelector('input[name="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_bool"]:checked');
+                const textarea_{{ case_data.case.case_id }}_{{ loop.index0 }} = document.querySelector('textarea[name="q_{{ case_data.case.case_id }}_{{ loop.index0 }}_reason"]');
+                
+                if (!radio_{{ case_data.case.case_id }}_{{ loop.index0 }}) {
+                    missingFields.push('Caso {{ case_data.case.case_id }}, Pregunta {{ loop.index }}: Falta seleccionar Verdadero/Falso');
+                }
+                
+                if (!textarea_{{ case_data.case.case_id }}_{{ loop.index0 }} || textarea_{{ case_data.case.case_id }}_{{ loop.index0 }}.value.trim().length < MIN_CHARS) {
+                    missingFields.push('Caso {{ case_data.case.case_id }}, Pregunta {{ loop.index }}: Justificación insuficiente');
+                }
+            {% endfor %}
+        {% endfor %}
+        
+        if (missingFields.length > 0) {
+            e.preventDefault();
+            alert('⚠️ Por favor corrija lo siguiente antes de enviar:\n\n' + missingFields.join('\n'));
+            return false;
+        }
+        
+        // Confirmar envío
+        const confirmSubmit = confirm(
+            '🎯 ¿Está seguro que desea enviar su examen?\n\n' +
+            '⚠️ IMPORTANTE: No podrá realizar cambios después de enviar.\n' +
+            '✅ Una vez enviado, recibirá sus resultados inmediatamente.'
+        );
+        
+        if (!confirmSubmit) {
+            e.preventDefault();
+            return false;
+        }
+        
+        console.log('Formulario validado y enviado correctamente');
+    });
+    
+    // Estado inicial
     updateOverallProgress();
-    
-    // Auto-save functionality
-    startAutoSave();
-    
-    // Show instructions by default
-    toggleInstructions();
+    console.log('Sistema de examen inicializado correctamente');
 });
-
-function toggleInstructions() {
-    const content = document.getElementById('instructions-content');
-    const toggleIcon = document.querySelector('.toggle-icon');
-    
-    if (content.classList.contains('show')) {
-        content.classList.remove('show');
-        toggleIcon.textContent = '▼';
-    } else {
-        content.classList.add('show');
-        toggleIcon.textContent = '▲';
-    }
-}
-
-function updateQuestionStatus(questionIndex) {
-    const radioChecked = document.querySelector(`input[name*="${questionIndex.split('_').slice(0, 3).join('_')}"]:checked`);
-    const textarea = document.querySelector(`textarea[name*="${questionIndex}"]`);
-    const statusElement = document.getElementById(`status_${questionIndex}`);
-    
-    let status = 'pending';
-    let statusText = 'Pendiente';
-    let statusIcon = '⏳';
-    
-    if (radioChecked && textarea && textarea.value.trim().length >= 50) {
-        status = 'complete';
-        statusText = 'Completa';
-        statusIcon = '✅';
-    } else if (radioChecked || (textarea && textarea.value.trim().length > 0)) {
-        status = 'partial';
-        statusText = 'Parcial';
-        statusIcon = '🔄';
-    }
-    
-    if (statusElement) {
-        statusElement.className = `question-status ${status}`;
-        statusElement.innerHTML = `<span class="status-indicator">${statusIcon}</span><span class="status-text">${statusText}</span>`;
-    }
-    
-    updateCaseProgress();
-    updateOverallProgress();
-    updateSubmitReadiness();
-}
-
-function updateCharacterCount(questionIndex) {
-    const textarea = document.querySelector(`textarea[name*="${questionIndex}"]`);
-    const counter = document.getElementById(`counter_${questionIndex}`);
-    
-    if (textarea && counter) {
-        const currentCount = textarea.value.length;
-        const currentCountElement = counter.querySelector('.current-count');
-        
-        if (currentCountElement) {
-            currentCountElement.textContent = currentCount;
-        }
-        
-        // Update textarea styling based on length
-        textarea.classList.remove('error', 'warning', 'good');
-        if (currentCount < 50) {
-            textarea.classList.add('error');
-        } else if (currentCount < 150) {
-            textarea.classList.add('warning');
-        } else {
-            textarea.classList.add('good');
-        }
-    }
-}
-
-function analyzeResponseQuality(questionIndex) {
-    const textarea = document.querySelector(`textarea[name*="${questionIndex}"]`);
-    const qualityIndicators = document.getElementById(`quality_${questionIndex}`);
-    
-    if (!textarea || !qualityIndicators) return;
-    
-    const text = textarea.value.trim().toLowerCase();
-    const length = text.length;
-    
-    // Show quality indicators
-    qualityIndicators.style.display = 'block';
-    
-    // Check length
-    const lengthItem = document.getElementById(`length_${questionIndex}`);
-    if (lengthItem) {
-        const lengthStatus = lengthItem.querySelector('.quality-status');
-        if (length >= 150) {
-            lengthStatus.textContent = '✅';
-            lengthStatus.className = 'quality-status good';
-        } else if (length >= 50) {
-            lengthStatus.textContent = '⚠️';
-            lengthStatus.className = 'quality-status warning';
-        } else {
-            lengthStatus.textContent = '❌';
-            lengthStatus.className = 'quality-status error';
-        }
-    }
-    
-    // Check legal terminology
-    const legalTerms = ['artículo', 'art.', 'ley', 'lpi', 'constitución', 'derecho', 'jurídico', 'legal'];
-    const legalCount = legalTerms.filter(term => text.includes(term)).length;
-    const legalItem = document.getElementById(`legal_${questionIndex}`);
-    if (legalItem) {
-        const legalStatus = legalItem.querySelector('.quality-status');
-        if (legalCount >= 3) {
-            legalStatus.textContent = '✅';
-            legalStatus.className = 'quality-status good';
-        } else if (legalCount >= 1) {
-            legalStatus.textContent = '⚠️';
-            legalStatus.className = 'quality-status warning';
-        } else {
-            legalStatus.textContent = '❌';
-            legalStatus.className = 'quality-status error';
-        }
-    }
-    
-    // Check NFT terminology
-    const nftTerms = ['nft', 'token', 'blockchain', 'smart contract', 'tokenización', 'soporte', 'obra intelectual'];
-    const nftCount = nftTerms.filter(term => text.includes(term)).length;
-    const nftItem = document.getElementById(`nft_${questionIndex}`);
-    if (nftItem) {
-        const nftStatus = nftItem.querySelector('.quality-status');
-        if (nftCount >= 3) {
-            nftStatus.textContent = '✅';
-            nftStatus.className = 'quality-status good';
-        } else if (nftCount >= 1) {
-            nftStatus.textContent = '⚠️';
-            nftStatus.className = 'quality-status warning';
-        } else {
-            nftStatus.textContent = '❌';
-            nftStatus.className = 'quality-status error';
-        }
-    }
-}
-
-function insertTerm(textareaName, term) {
-    const textarea = document.querySelector(`[name="${textareaName}"]`);
-    if (textarea) {
-        const cursorPos = textarea.selectionStart;
-        const textBefore = textarea.value.substring(0, cursorPos);
-        const textAfter = textarea.value.substring(cursorPos);
-        
-        // Insert term with proper spacing
-        const insertText = (textBefore && !textBefore.endsWith(' ') ? ' ' : '') + term + ' ';
-        textarea.value = textBefore + insertText + textAfter;
-        
-        // Update cursor position
-        const newPos = cursorPos + insertText.length;
-        textarea.setSelectionRange(newPos, newPos);
-        textarea.focus();
-        
-        // Trigger updates
-        updateCharacterCount(textareaName.replace('case_', '').replace('_reason', ''));
-        updateQuestionStatus(textareaName.replace('case_', '').replace('_reason', ''));
-    }
-}
-
-function updateCaseProgress() {
-    for (let caseId = 1; caseId <= 5; caseId++) {
-        const completionElement = document.querySelector(`[data-case="${caseId}"]`);
-        if (!completionElement) continue;
-        
-        let completed = 0;
-        const total = 2;
-        
-        for (let qIndex = 0; qIndex < total; qIndex++) {
-            const radioChecked = document.querySelector(`input[name="case_${caseId}_bool_${qIndex}"]:checked`);
-            const textarea = document.querySelector(`textarea[name="case_${caseId}_reason_${qIndex}"]`);
-            
-            if (radioChecked && textarea && textarea.value.trim().length >= 50) {
-                completed++;
-            }
-        }
-        
-        const completionText = completionElement.querySelector('.completion-text');
-        const completionFill = completionElement.querySelector('.completion-fill');
-        
-        if (completionText) completionText.textContent = `${completed}/${total}`;
-        if (completionFill) completionFill.style.width = `${(completed / total) * 100}%`;
-    }
-}
-
-function updateOverallProgress() {
-    let totalCompleted = 0;
-    const totalQuestions = 10;
-    
-    for (let caseId = 1; caseId <= 5; caseId++) {
-        for (let qIndex = 0; qIndex < 2; qIndex++) {
-            const radioChecked = document.querySelector(`input[name="case_${caseId}_bool_${qIndex}"]:checked`);
-            const textarea = document.querySelector(`textarea[name="case_${caseId}_reason_${qIndex}"]`);
-            
-            if (radioChecked && textarea && textarea.value.trim().length >= 50) {
-                totalCompleted++;
-            }
-        }
-    }
-    
-    const percentage = Math.round((totalCompleted / totalQuestions) * 100);
-    
-    // Update progress circle
-    const progressCircle = document.getElementById('progress-circle');
-    const progressValue = progressCircle.querySelector('.progress-value');
-    if (progressValue) progressValue.textContent = `${percentage}%`;
-    
-    // Update progress circle visual
-    const degrees = (percentage / 100) * 360;
-    progressCircle.style.background = `conic-gradient(#27ae60 0deg, #27ae60 ${degrees}deg, rgba(255,255,255,0.3) ${degrees}deg, rgba(255,255,255,0.3) 360deg)`;
-    
-    // Update progress text
-    const progressStatus = document.getElementById('progress-status');
-    const progressDetails = document.getElementById('progress-details');
-    
-    if (progressStatus) {
-        if (percentage === 100) {
-            progressStatus.textContent = '¡Examen completo!';
-        } else if (percentage >= 50) {
-            progressStatus.textContent = 'Buen progreso...';
-        } else {
-            progressStatus.textContent = 'Completando examen...';
-        }
-    }
-    
-    if (progressDetails) {
-        progressDetails.textContent = `${totalCompleted} de ${totalQuestions} preguntas completadas`;
-    }
-    
-    // Update submit section
-    const submitProgress = document.getElementById('submit-progress');
-    if (submitProgress) {
-        const progressFraction = submitProgress.querySelector('.progress-fraction');
-        if (progressFraction) progressFraction.textContent = `${totalCompleted}/10`;
-    }
-}
-
-function updateSubmitReadiness() {
-    let totalCompleted = 0;
-    let totalResponses = 0;
-    let qualityScore = 0;
-    
-    for (let caseId = 1; caseId <= 5; caseId++) {
-        for (let qIndex = 0; qIndex < 2; qIndex++) {
-            const radioChecked = document.querySelector(`input[name="case_${caseId}_bool_${qIndex}"]:checked`);
-            const textarea = document.querySelector(`textarea[name="case_${caseId}_reason_${qIndex}"]`);
-            
-            if (radioChecked) totalResponses++;
-            if (textarea && textarea.value.trim().length >= 50) {
-                totalResponses++;
-                if (textarea.value.trim().length >= 150) qualityScore++;
-            }
-            
-            if (radioChecked && textarea && textarea.value.trim().length >= 50) {
-                totalCompleted++;
-            }
-        }
-    }
-    
-    // Update pre-submit checks
-    const checkResponses = document.getElementById('check-responses');
-    const checkQuality = document.getElementById('check-quality');
-    const checkReady = document.getElementById('check-ready');
-    const submitBtn = document.getElementById('submit-btn');
-    
-    // Check responses
-    if (totalResponses >= 20) { // 10 radio + 10 textarea
-        checkResponses.innerHTML = '<span class="check-icon">✅</span><span class="check-text">Todas las respuestas completadas</span>';
-        checkResponses.className = 'check-item complete';
-    } else {
-        checkResponses.innerHTML = `<span class="check-icon">⏳</span><span class="check-text">Completando respuestas... (${totalResponses}/20)</span>`;
-    }
-    
-    // Check quality
-    if (qualityScore >= 8) {
-        checkQuality.innerHTML = '<span class="check-icon">✅</span><span class="check-text">Justificaciones de buena calidad</span>';
-        checkQuality.className = 'check-item complete';
-    } else if (qualityScore >= 5) {
-        checkQuality.innerHTML = `<span class="check-icon">⚠️</span><span class="check-text">Calidad moderada (${qualityScore}/10)</span>`;
-        checkQuality.className = 'check-item warning';
-    } else {
-        checkQuality.innerHTML = `<span class="check-icon">⏳</span><span class="check-text">Mejorando justificaciones... (${qualityScore}/10)</span>`;
-    }
-    
-    // Check overall readiness
-    if (totalCompleted === 10) {
-        checkReady.innerHTML = '<span class="check-icon">✅</span><span class="check-text">Sistema listo para evaluación</span>';
-        checkReady.className = 'check-item complete';
-        submitBtn.disabled = false;
-    } else {
-        checkReady.innerHTML = `<span class="check-icon">⏳</span><span class="check-text">Preparando evaluación... (${totalCompleted}/10)</span>`;
-        submitBtn.disabled = true;
-    }
-}
-
-function reviewIncompleteAnswers() {
-    const incomplete = [];
-    
-    for (let caseId = 1; caseId <= 5; caseId++) {
-        for (let qIndex = 0; qIndex < 2; qIndex++) {
-            const radioChecked = document.querySelector(`input[name="case_${caseId}_bool_${qIndex}"]:checked`);
-            const textarea = document.querySelector(`textarea[name="case_${caseId}_reason_${qIndex}"]`);
-            
-            if (!radioChecked || !textarea || textarea.value.trim().length < 50) {
-                incomplete.push(`Caso ${caseId}, Pregunta ${qIndex + 1}`);
-            }
-        }
-    }
-    
-    if (incomplete.length === 0) {
-        alert('🎉 ¡Excelente! Todas las preguntas están completadas correctamente.');
-    } else {
-        alert(`📋 Preguntas que necesitan atención:\n\n${incomplete.join('\n')}\n\nPor favor complete estas preguntas antes de enviar.`);
-    }
-}
-
-function startAutoSave() {
-    const AUTOSAVE_INTERVAL = 30000; // 30 seconds
-    
-    setInterval(() => {
-        saveProgress();
-    }, AUTOSAVE_INTERVAL);
-    
-    // Save on beforeunload
-    window.addEventListener('beforeunload', saveProgress);
-}
-
-function saveProgress() {
-    const formData = new FormData(document.getElementById('comprehensive-exam-form'));
-    const data = Object.fromEntries(formData.entries());
-    
-    try {
-        localStorage.setItem('nft_exam_progress', JSON.stringify({
-            data: data,
-            timestamp: new Date().toISOString(),
-            url: window.location.pathname
-        }));
-        
-        // Show notification briefly
-        showAutoSaveNotification();
-    } catch (e) {
-        console.warn('Could not save progress:', e);
-    }
-}
-
-function showAutoSaveNotification() {
-    const notification = document.getElementById('auto-save-notification');
-    notification.style.display = 'flex';
-    
-    setTimeout(() => {
-        notification.style.display = 'none';
-    }, 2000);
-}
-
-// Form submission with validation
-document.getElementById('comprehensive-exam-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Final validation
-    let totalCompleted = 0;
-    const issues = [];
-    
-    for (let caseId = 1; caseId <= 5; caseId++) {
-        for (let qIndex = 0; qIndex < 2; qIndex++) {
-            const radioChecked = document.querySelector(`input[name="case_${caseId}_bool_${qIndex}"]:checked`);
-            const textarea = document.querySelector(`textarea[name="case_${caseId}_reason_${qIndex}"]`);
-            
-            if (!radioChecked) {
-                issues.push(`Caso ${caseId}, Pregunta ${qIndex + 1}: Falta seleccionar Verdadero/Falso`);
-            }
-            
-            if (!textarea || textarea.value.trim().length < 50) {
-                issues.push(`Caso ${caseId}, Pregunta ${qIndex + 1}: Justificación muy breve (mínimo 50 caracteres)`);
-            }
-            
-            if (radioChecked && textarea && textarea.value.trim().length >= 50) {
-                totalCompleted++;
-            }
-        }
-    }
-    
-    if (issues.length > 0) {
-        alert(`⚠️ Corrija los siguientes problemas antes de enviar:\n\n${issues.slice(0, 5).join('\n')}${issues.length > 5 ? `\n\n... y ${issues.length - 5} más` : ''}`);
-        return;
-    }
-    
-    // Final confirmation
-    const confirmed = confirm(
-        `🎓 ¿Está seguro de enviar su examen sobre NFTs y Propiedad Intelectual?\n\n` +
-        `📊 Progreso: ${totalCompleted}/10 preguntas completadas\n` +
-        `🤖 El sistema analizará sus respuestas con IA especializada\n` +
-        `⏰ Una vez enviado no podrá realizar cambios\n\n` +
-        `¿Desea continuar?`
-    );
-    
-    if (confirmed) {
-        // Clear auto-save
-        localStorage.removeItem('nft_exam_progress');
-        
-        // Show submission loading
-        showSubmissionLoading();
-        
-        // Submit form
-        setTimeout(() => {
-            this.submit();
-        }, 1000);
-    }
-});
-
-function showSubmissionLoading() {
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.className = 'submission-loading';
-    loadingOverlay.innerHTML = `
-        <div class="loading-content">
-            <div class="spinner-container">
-                <div class="spinner"></div>
-                <div class="spinner-ring"></div>
-            </div>
-            <h3>🚀 Enviando Examen sobre NFTs</h3>
-            <p>Procesando sus respuestas sobre tokens no fungibles y propiedad intelectual...</p>
-            <div class="loading-steps">
-                <div class="step active">⏳ Validando respuestas...</div>
-                <div class="step">🔗 Analizando conceptos NFT...</div>
-                <div class="step">🤖 Evaluando con IA especializada...</div>
-                <div class="step">📊 Calculando puntuación...</div>
-                <div class="step">📝 Generando feedback personalizado...</div>
-            </div>
-            <p class="loading-patience"><small>⏱️ Análisis integral en progreso...</small></p>
-        </div>
-    `;
-    
-    document.body.appendChild(loadingOverlay);
-    
-    // Animate steps
-    const steps = loadingOverlay.querySelectorAll('.step');
-    let currentStep = 0;
-    
-    const stepInterval = setInterval(() => {
-        if (currentStep < steps.length - 1) {
-            steps[currentStep].classList.remove('active');
-            steps[currentStep].classList.add('completed');
-            currentStep++;
-            steps[currentStep].classList.add('active');
-        } else {
-            clearInterval(stepInterval);
-        }
-    }, 1200);
-}
-
-// Additional styles for dynamic elements
-const additionalCSS = `
-.submission-loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(44, 62, 80, 0.95);
-    z-index: 10000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-}
-
-.loading-content {
-    text-align: center;
-    max-width: 500px;
-    padding: 2rem;
-}
-
-.spinner-container {
-    position: relative;
-    margin: 0 auto 2rem;
-    width: 80px;
-    height: 80px;
-}
-
-.spinner {
-    width: 60px;
-    height: 60px;
-    border: 4px solid rgba(255,255,255,0.3);
-    border-top: 4px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    position: absolute;
-    top: 10px;
-    left: 10px;
-}
-
-.spinner-ring {
-    width: 80px;
-    height: 80px;
-    border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.loading-content h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1.8rem;
-}
-
-.loading-steps {
-    margin: 2rem 0;
-    text-align: left;
-}
-
-.step {
-    padding: 0.5rem 0;
-    opacity: 0.5;
-    transition: all 0.5s ease;
-}
-
-.step.active {
-    opacity: 1;
-    color: #3498db;
-    font-weight: 500;
-}
-
-.step.completed {
-    opacity: 1;
-    color: #27ae60;
-}
-
-.loading-patience {
-    margin-top: 2rem;
-    opacity: 0.8;
-    font-style: italic;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0%, 100% { 
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% { 
-        opacity: 0.6;
-        transform: scale(1.1);
-    }
-}
-`;
-
-// Inject additional CSS
-const style = document.createElement('style');
-style.textContent = additionalCSS;
-document.head.appendChild(style);
 </script>
 {% endblock %}

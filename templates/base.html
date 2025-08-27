@@ -36,10 +36,51 @@
             min-height: 100vh;
         }
         
-        /* Estilos específicos para NFT Exam */
+        /* === CORRECCIÓN CRÍTICA: ESTILOS PARA BOTONES DE RADIO === */
+        /* Estilo para los botones de radio seleccionados */
+        input[type="radio"]:checked + label.btn-outline {
+            background-color: var(--theme-5-primary) !important;
+            color: white !important;
+            border-color: var(--theme-5-primary) !important;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4) !important;
+            transform: translateY(-2px);
+        }
+
+        /* Suavizar la transición al seleccionar */
+        label.btn-outline {
+            transition: all 0.3s ease-in-out !important;
+        }
+
+        /* Hover effect para botones no seleccionados */
+        label.btn-outline:hover {
+            background-color: rgba(52, 152, 219, 0.1) !important;
+            border-color: var(--theme-5-primary) !important;
+            transform: translateY(-1px);
+        }
+        
+        /* === ESTILOS ESPECÍFICOS PARA NFT EXAM === */
         .character-counter {
             font-size: 0.85rem;
             margin-top: 0.5rem;
+        }
+        
+        .char-counter {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            text-align: right;
+            font-weight: 500;
+        }
+        
+        .char-counter.valid {
+            color: #28a745;
+        }
+        
+        .char-counter.invalid {
+            color: #dc3545;
+        }
+        
+        .char-counter.warning {
+            color: #ffc107;
         }
         
         .term-chips .badge {
@@ -69,6 +110,10 @@
             color: var(--theme-5-primary);
         }
         
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
         /* Exam blocked styles */
         .exam-blocked {
             background: rgba(231, 76, 60, 0.1);
@@ -96,6 +141,42 @@
             padding: 1rem;
             margin-bottom: 1rem;
             color: #721c24;
+        }
+
+        /* === MEJORAS ADICIONALES DE UI === */
+        /* Mejorar la visibilidad de elementos del formulario */
+        .form-control:focus {
+            border-color: var(--theme-5-primary);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        /* Estilo mejorado para tarjetas del examen */
+        .card-animated-border {
+            transition: all 0.3s ease;
+        }
+
+        .card-animated-border:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Botón de envío mejorado */
+        .btn-xl {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .d-flex.gap-3 {
+                flex-direction: column;
+                gap: 0.5rem !important;
+            }
+            
+            label.btn-outline {
+                margin-bottom: 0.5rem;
+            }
         }
     </style>
     
@@ -141,70 +222,112 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="container pt-4">
-                {% for message in messages %}
-                    <div class="alert alert-warning alert-dismissible" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="container py-4">
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert-container mb-4">
+                        {% for message in messages %}
+                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page Title -->
+            {% if self.page_title() %}
+                <div class="page-title-section mb-4" data-animate="fade-down">
+                    <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
                 </div>
             {% endif %}
-        {% endwith %}
-        
-        <div class="container py-4">
+            
+            <!-- Page Content -->
             {% block content %}{% endblock %}
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="site-footer">
-        <div class="container text-center">
-            <img src="https://legaltech.com.gt/fav/favicon-96x96.png" alt="ACADEMIA Logo" class="footer-logo" style="height: 40px; margin-bottom: 1rem;">
-            <p class="mb-1 text-white">
-                <strong>Sistema de Evaluación con Inteligencia Artificial</strong>
-            </p>
-            <p class="text-muted text-sm">
-                <i class="fas fa-robot me-1"></i>
-                Evaluación automática con análisis jurídico avanzado
-            </p>
-            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem auto; width: 50%;">
-            <p class="text-muted text-sm mb-0" style="color: rgba(255,255,255,0.7) !important;">
-                © 2025 
-                <a href="https://legaltech.com.gt" class="text-white-50">LegalTech</a> - David Salazar. 
-                Todos los derechos reservados.
-            </p>
+    <footer class="site-footer mt-auto">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="footer-info">
+                        <p class="mb-0">
+                            <strong>Sistema de Evaluación NFTs y Propiedad Intelectual</strong><br>
+                            <small class="text-muted">Organismo Judicial de Guatemala - Academia Legal Tech</small>
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="footer-links">
+                        <a href="{{ url_for('info') }}" class="footer-link">
+                            <i class="fas fa-info-circle me-1"></i>Rúbrica
+                        </a>
+                        <span class="separator">|</span>
+                        <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" 
+                           target="_blank" class="footer-link">
+                            <i class="fas fa-book me-1"></i>Documento Base
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="copyright mb-0">
+                        <small class="text-muted">
+                            &copy; {{ now.strftime('%Y') }} Legal Tech Guatemala. 
+                            Powered by PROFINS XXIV Framework.
+                            {% if is_exam_blocked %}
+                                <span class="badge badge-danger ms-2">EXAMEN CERRADO</span>
+                            {% else %}
+                                <span class="badge badge-success ms-2">EXAMEN ACTIVO</span>
+                            {% endif %}
+                        </small>
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
 
     <!-- Framework JavaScript -->
     <script src="https://legaltech.com.gt/themeoj/script.js"></script>
     
-    <!-- Funcionalidad específica de la aplicación -->
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
-    
-    <!-- Scripts adicionales por página -->
+    <!-- Scripts específicos de la página -->
     {% block scripts %}{% endblock %}
-
+    
     <!-- Inicialización global -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Configurar timezone de Guatemala
-            const guatemalaTime = new Date().toLocaleString("en-US", {timeZone: "America/Guatemala"});
-            window.currentTime = new Date(guatemalaTime);
+        // Inicializar componentes del framework
+        document.addEventListener('DOMContentLoaded', () => {
+            // Detectar si estamos en modo desarrollo
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             
-            // Bloqueo del examen (27/08/2025 23:59 Guatemala)
-            const examDeadline = new Date('2025-08-27T23:59:00-06:00'); // GMT-6 Guatemala
-            window.examDeadline = examDeadline;
-            window.isExamBlocked = window.currentTime > examDeadline;
+            if (isDev) {
+                console.log('🎓 Academia NFT & PI Sistema Activo');
+                console.log('📊 Framework: PROFINS XXIV');
+                console.log('⚖️ Contexto: Organismo Judicial Guatemala');
+            }
             
-            // Disparar evento personalizado para que app.js sepa que el DOM está listo
-            document.dispatchEvent(new CustomEvent('FrameworkReady'));
+            // Animaciones de entrada
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
             
-            console.log('PROFINS XXIV Framework ready');
+            document.querySelectorAll('[data-animate]').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.6s ease-out';
+                observer.observe(el);
+            });
         });
     </script>
 </body>
