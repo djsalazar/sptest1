@@ -1,110 +1,445 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Resultado Detallado - {{ result.student_id }}{% endblock %}
+
 {% block content %}
-<section class="result-detail-container">
-    <h2>Detalle del Resultado #{{ result.id }}</h2>
-    <p><strong>Fecha y hora:</strong> {{ result.timestamp }}</p>
-    <p><strong>Estudiante:</strong> {{ result.student_id }}</p>
-    <p><strong>Caso:</strong> {{ case.title }}</p>
-    <p><strong>Puntaje total:</strong> {{ '%.2f'|format(result.score) }} / 100</p>
-    <h3>Respuestas</h3>
-    <ol>
-        {% for answer in answers %}
-        <li>
-            <p><strong>Pregunta {{ loop.index }}:</strong> {{ case.questions[loop.index0].text }}</p>
-            <p>Respuesta estudiante: <em>{{ 'Verdadero' if answer.user_bool else 'Falso' }}</em></p>
-            <p>Respuesta correcta: <em>{{ 'Verdadero' if answer.correct else 'Falso' }}</em></p>
-            <p>Justificación:</p>
-            <blockquote>{{ answer.user_reason }}</blockquote>
-            
-            <!-- Breakdown básico -->
-            <ul class="breakdown">
-                <li>Veracidad: {{ '%.1f'|format(answer.breakdown.truth) }} pts</li>
-                <li>Argumentación: {{ '%.1f'|format(answer.breakdown.argument) }} pts</li>
-                {% if answer.breakdown.ai_penalty < 0 %}
-                <li>Penalización IA: {{ '%.1f'|format(answer.breakdown.ai_penalty) }} pts</li>
-                {% endif %}
-                <li>Puntuación total: {{ '%.2f'|format(answer.score) }} pts</li>
-            </ul>
-            
-            <!-- Análisis detallado de IA si está disponible -->
-            {% if answer.breakdown.ai_analysis %}
-            <div class="ai-analysis">
-                <h4>Análisis de IA - Rúbrica Detallada</h4>
-                <div class="criteria-scores">
-                    <div class="criteria-grid">
-                        <div class="criterion">
-                            <span class="criterion-name">Opinión fundada:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.opinion_fundada }}">{{ answer.breakdown.ai_analysis.opinion_fundada }}/5</span>
+<!-- Cabecera del Resultado -->
+<div class="card mb-4" data-animate="fade-up">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="section-header text-start mb-0">
+                    <h2 class="section-title mb-1">
+                        <i class="fas fa-chart-line text-primary me-2"></i>
+                        Análisis Detallado de Evaluación
+                    </h2>
+                    <p class="section-subtitle mt-0">
+                        <strong>Estudiante:</strong> {{ result.student_id.split(' - ')[1] if ' - ' in result.student_id else result.student_id }}
+                        <span class="badge badge-light ms-2">ID: {{ result.student_id.split(' - ')[0] if ' - ' in result.student_id else 'N/A' }}</span>
+                    </p>
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ result.timestamp[:19].replace('T', ' ') }}
+                    </small>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center text-lg-end mt-3 mt-lg-0">
+                <h5 class="text-muted mb-2">Puntuación Final</h5>
+                <div class="progress-ring mx-auto mx-lg-0" data-progress="{{ result.score|round(0) }}">
+                    <svg width="100" height="100" viewBox="0 0 120 120">
+                        <circle class="progress-ring-circle progress-ring-background" stroke-width="10" cx="60" cy="60" r="52"></circle>
+                        <circle class="progress-ring-circle progress-ring-progress" stroke-width="10" cx="60" cy="60" r="52"></circle>
+                    </svg>
+                    <div class="progress-ring-text">{{ result.score|round(1) }}</div>
+                </div>
+                <div class="mt-2">
+                    {% if result.score >= 60 %}
+                        <span class="badge badge-success badge-lg">APROBADO</span>
+                    {% else %}
+                        <span class="badge badge-danger badge-lg">REPROBADO</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if result.case_id == 0 %}
+    <!-- EXAMEN INTEGRAL -->
+    {% set answers_data = result.answers_json|from_json %}
+    {% set all_cases_answers = answers_data.get('all_cases', {}) %}
+    
+    <!-- Métricas de Rendimiento -->
+    <div class="dashboard-grid mb-4">
+        <div class="dashboard-card" data-animate="fade-up" data-animate-delay="100ms">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-check-circle text-success"></i>
+                </div>
+                <div class="metric-value">
+                    {{ (all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('user_bool', 'equalto', all_cases_answers.values() | map('map', attribute='answers') | flatten | map(attribute='correct_bool')) | list | length) }}/10
+                </div>
+                <div class="metric-label">Respuestas V/F Correctas</div>
+            </div>
+        </div>
+        
+        <div class="dashboard-card" data-animate="fade-up" data-animate-delay="200ms">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-balance-scale text-primary"></i>
+                </div>
+                <div class="metric-value">
+                    {{ all_cases_answers.values() | map('map', attribute='answers') | flatten | selectattr('breakdown') | selectattr('breakdown.argument', '>', 3) | list | length }}/10
+                </div>
+                <div class="metric-label">Argumentaciones Sólidas</div>
+            </div>
+        </div>
+        
+        <div class="dashboard-card" data-animate="fade-up" data-animate-delay="300ms">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-robot text-info"></i>
+                </div>
+                <div class="metric-value text-info">
+                    {{ ((all_cases_answers.values() | map('map', attribute='answers') | flatten | map(attribute='breakdown') | map(attribute='argument') | sum) / 10) | round(1) }}/5.0
+                </div>
+                <div class="metric-label">Análisis IA Promedio</div>
+            </div>
+        </div>
+        
+        <div class="dashboard-card" data-animate="fade-up" data-animate-delay="400ms">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <i class="fas fa-clock text-warning"></i>
+                </div>
+                <div class="metric-value text-warning">
+                    {% set rubric = result.rubric_json|from_json %}
+                    {{ rubric.get('paste_penalty', 0)|abs|round(1) }}
+                </div>
+                <div class="metric-label">Penalizaciones</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Análisis por Caso de Estudio -->
+    <div class="section-header" data-animate="fade-up">
+        <h3 class="section-title">
+            <i class="fas fa-clipboard-list me-2"></i>
+            Análisis por Caso de Estudio
+        </h3>
+        <p class="section-subtitle">Desglose detallado del rendimiento por cada caso NFT evaluado</p>
+    </div>
+
+    {% for case_id_str, case_data in all_cases_answers.items() %}
+        {% set case_id = case_id_str|int %}
+        {% set case = cases[case_id] %}
+        {% set case_score = case_data.answers | map(attribute='score') | sum %}
+        
+        <div class="accordion mb-3" id="accordion_case_{{ case_id }}">
+            <div class="accordion-item" data-animate="fade-up">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_case_{{ case_id }}">
+                        <div class="d-flex align-items-center w-100">
+                            <span class="badge {% if case_score >= 15 %}badge-success{% elif case_score >= 10 %}badge-warning{% else %}badge-danger{% endif %} me-3">
+                                {{ case_score|round(0) }}/20
+                            </span>
+                            <div class="flex-grow-1">
+                                <strong>Caso {{ case_id }}:</strong> {{ case.title }}
+                                <div class="text-muted small mt-1">
+                                    <i class="fas fa-link me-1"></i>NFT • 
+                                    <i class="fas fa-balance-scale me-1"></i>Propiedad Intelectual
+                                </div>
+                            </div>
+                            <div class="text-end me-3">
+                                <small class="text-muted">
+                                    {{ ((case_score / 20) * 100)|round(0) }}% completitud
+                                </small>
+                            </div>
                         </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Valores éticos:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.valores_eticos }}">{{ answer.breakdown.ai_analysis.valores_eticos }}/5</span>
+                    </button>
+                </h2>
+                <div id="collapse_case_{{ case_id }}" class="accordion-collapse collapse" data-bs-parent="#accordion_case_{{ case_id }}">
+                    <div class="accordion-body">
+                        <!-- Descripción del Caso -->
+                        <div class="alert alert-light border-start border-4 border-primary">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Descripción del Caso
+                            </h6>
+                            <p class="mb-0">{{ case.description }}</p>
                         </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Lenguaje y terminología:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.lenguaje_terminologia }}">{{ answer.breakdown.ai_analysis.lenguaje_terminologia }}/5</span>
-                        </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Citas y precisión:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.citas_precision }}">{{ answer.breakdown.ai_analysis.citas_precision }}/5</span>
-                        </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Estructura y coherencia:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.estructura_coherencia }}">{{ answer.breakdown.ai_analysis.estructura_coherencia }}/5</span>
-                        </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Profundidad:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.profundidad_fundamentacion }}">{{ answer.breakdown.ai_analysis.profundidad_fundamentacion }}/5</span>
-                        </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Capacidad crítica:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.capacidad_critica }}">{{ answer.breakdown.ai_analysis.capacidad_critica }}/5</span>
-                        </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Presentación:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.presentacion_estilo }}">{{ answer.breakdown.ai_analysis.presentacion_estilo }}/5</span>
-                        </div>
-                        <div class="criterion">
-                            <span class="criterion-name">Innovación:</span>
-                            <span class="score score-{{ answer.breakdown.ai_analysis.innovacion_creatividad }}">{{ answer.breakdown.ai_analysis.innovacion_creatividad }}/5</span>
-                        </div>
+
+                        <!-- Preguntas del Caso -->
+                        {% for answer in case_data.answers %}
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card border-start border-4 {% if answer.score >= 8 %}border-success{% elif answer.score >= 6 %}border-warning{% else %}border-danger{% endif %}">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="card-title mb-0">
+                                                <i class="fas fa-question-circle me-2"></i>
+                                                Pregunta {{ loop.index }}
+                                            </h6>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <span class="badge {% if answer.score >= 8 %}badge-success{% elif answer.score >= 6 %}badge-warning{% else %}badge-danger{% endif %}">
+                                                    {{ answer.score|round(1) }}/10
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- Pregunta -->
+                                            <div class="mb-3">
+                                                <strong>Enunciado:</strong>
+                                                <div class="p-3 bg-light rounded mt-2">
+                                                    {{ answer.question_text }}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Respuesta del Estudiante -->
+                                            <div class="row">
+                                                <div class="col-lg-6 mb-3">
+                                                    <div class="card h-100">
+                                                        <div class="card-header">
+                                                            <h6 class="card-title m-0">
+                                                                <i class="fas fa-user me-2"></i>
+                                                                Respuesta del Estudiante
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <strong>Selección:</strong>
+                                                                <span class="badge {% if answer.user_bool == answer.correct_bool %}badge-success{% else %}badge-danger{% endif %} ms-2">
+                                                                    {{ 'Verdadero' if answer.user_bool else 'Falso' }}
+                                                                    {% if answer.user_bool == answer.correct_bool %}
+                                                                        <i class="fas fa-check ms-1"></i>
+                                                                    {% else %}
+                                                                        <i class="fas fa-times ms-1"></i>
+                                                                    {% endif %}
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <strong>Justificación:</strong>
+                                                            <div class="p-3 bg-light rounded mt-2">
+                                                                <em>"{{ answer.user_reason }}"</em>
+                                                            </div>
+                                                            
+                                                            <div class="mt-3">
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-text-width me-1"></i>
+                                                                    {{ answer.user_reason|length }} caracteres
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Análisis IA -->
+                                                <div class="col-lg-6 mb-3">
+                                                    <div class="card h-100">
+                                                        <div class="card-header">
+                                                            <h6 class="card-title m-0">
+                                                                <i class="fas fa-robot me-2"></i>
+                                                                Análisis y Feedback IA
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <!-- Métricas de evaluación -->
+                                                            <div class="row text-center mb-3">
+                                                                <div class="col-6">
+                                                                    <div class="metric-small">
+                                                                        <div class="metric-value">{{ answer.breakdown.truth|round(1) }}</div>
+                                                                        <div class="metric-label">Veracidad</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <div class="metric-small">
+                                                                        <div class="metric-value">{{ answer.breakdown.argument|round(1) }}</div>
+                                                                        <div class="metric-label">Argumentación</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Criterios detallados si existen -->
+                                                            {% if answer.breakdown.get('ai_analysis') %}
+                                                                <div class="accordion accordion-flush">
+                                                                    <div class="accordion-item">
+                                                                        <h2 class="accordion-header">
+                                                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ai_analysis_{{ case_id }}_{{ loop.index0 }}">
+                                                                                <small>Ver análisis detallado IA</small>
+                                                                            </button>
+                                                                        </h2>
+                                                                        <div id="ai_analysis_{{ case_id }}_{{ loop.index0 }}" class="accordion-collapse collapse">
+                                                                            <div class="accordion-body">
+                                                                                <div class="row text-center">
+                                                                                    {% for criterion, value in answer.breakdown.ai_analysis.items() %}
+                                                                                        {% if value is number %}
+                                                                                            <div class="col-6 mb-2">
+                                                                                                <small class="text-muted d-block">{{ criterion|replace('_', ' ')|title }}</small>
+                                                                                                <strong class="text-primary">{{ value }}/5</strong>
+                                                                                            </div>
+                                                                                        {% endif %}
+                                                                                    {% endfor %}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            {% endif %}
+                                                            
+                                                            <!-- Feedback de la IA -->
+                                                            {% if answer.breakdown.feedback %}
+                                                                <div class="mt-3">
+                                                                    <strong>Feedback Automático:</strong>
+                                                                    <div class="p-3 bg-info-subtle rounded mt-2">
+                                                                        <em class="text-info-emphasis">{{ answer.breakdown.feedback }}</em>
+                                                                    </div>
+                                                                </div>
+                                                            {% endif %}
+                                                            
+                                                            <!-- Penalizaciones si existen -->
+                                                            {% if answer.breakdown.ai_penalty > 0 %}
+                                                                <div class="alert alert-warning mt-3">
+                                                                    <small>
+                                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                                        Penalización aplicada: -{{ answer.breakdown.ai_penalty|round(1) }} puntos
+                                                                    </small>
+                                                                </div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if not loop.last %}
+                                <hr class="my-4">
+                            {% endif %}
+                        {% endfor %}
                     </div>
                 </div>
-                
-                {% if answer.breakdown.feedback %}
-                <div class="ai-feedback">
-                    <h5>Feedback de IA:</h5>
-                    <p>{{ answer.breakdown.feedback }}</p>
-                </div>
-                {% endif %}
             </div>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ol>
-    <h3>Eventos de registro</h3>
-    {% if events %}
-    <table class="event-table">
-        <thead>
-            <tr>
-                <th>Hora</th>
-                <th>Tipo</th>
-                <th>Detalles</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ev in events %}
-            <tr>
-                <td>{{ ev.event_time }}</td>
-                <td>{{ ev.event_type }}</td>
-                <td>{{ ev.details }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No se registraron eventos.</p>
-    {% endif %}
-    <p><a href="{{ url_for('dashboard') }}">Volver al panel</a></p>
-</section>
+        </div>
+    {% endfor %}
+
+{% else %}
+    <!-- EXAMEN INDIVIDUAL (si aún se usa) -->
+    {% set answers = result.answers_json|from_json %}
+    <div class="alert alert-info">
+        <h5 class="alert-heading">
+            <i class="fas fa-info-circle me-2"></i>
+            Examen Individual
+        </h5>
+        <p class="mb-0">Este es un resultado de examen individual del sistema anterior.</p>
+    </div>
+    
+    <!-- Mostrar respuestas individuales aquí si es necesario -->
+{% endif %}
+
+<!-- Eventos de Interacción (si existen) -->
+{% if events %}
+    <div class="card mt-4" data-animate="fade-up">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-history me-2"></i>
+                Registro de Actividad
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Evento</th>
+                            <th>Detalles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                            <tr>
+                                <td>
+                                    <small class="text-muted">{{ event.event_time[:19].replace('T', ' ') }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-light">{{ event.event_type }}</span>
+                                </td>
+                                <td>
+                                    <small>{{ event.details or 'N/A' }}</small>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Acciones -->
+<div class="text-center mt-5" data-animate="fade-up">
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+        </a>
+        <button onclick="window.print()" class="btn btn-outline btn-lg">
+            <i class="fas fa-print me-2"></i>Imprimir Reporte
+        </button>
+        <button onclick="exportResultData()" class="btn btn-info btn-lg">
+            <i class="fas fa-download me-2"></i>Exportar Datos
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animar círculo de progreso
+    const progressRing = document.querySelector('.progress-ring');
+    if (progressRing && window.AdvancedComponentsManager) {
+        window.AdvancedComponentsManager.animateProgressRing(progressRing);
+    }
+    
+    // Función para exportar datos del resultado
+    window.exportResultData = function() {
+        const resultData = {
+            student_id: '{{ result.student_id }}',
+            timestamp: '{{ result.timestamp }}',
+            score: {{ result.score }},
+            case_id: {{ result.case_id }},
+            detailed_results: @{{ result.answers_json|safe }}@
+        };
+        
+        const dataStr = JSON.stringify(resultData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `resultado_{{ result.id }}_{{ result.student_id|replace(' ', '_') }}.json`;
+        link.click();
+        
+        // Notificación de éxito
+        if (window.Profins && window.Profins.showNotification) {
+            window.Profins.showNotification('Datos exportados correctamente', 'success');
+        }
+    };
+    
+    console.log('✅ Vista de resultado individual cargada');
+});
+</script>
+
+<style>
+.metric-small {
+    padding: 0.5rem;
+    text-align: center;
+}
+
+.metric-small .metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--theme-5-primary);
+}
+
+.metric-small .metric-label {
+    font-size: 0.75rem;
+    color: var(--bs-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media print {
+    .btn, .accordion-button {
+        display: none !important;
+    }
+    
+    .accordion-collapse {
+        display: block !important;
+    }
+    
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+}
+</style>
 {% endblock %}

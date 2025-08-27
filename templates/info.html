@@ -1,575 +1,534 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Examen Integral - NFTs y Propiedad Intelectual</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
+{% block title %}Información del Sistema{% endblock %}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #2c3e50;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+{% block content %}
+<!-- Hero Section -->
+<section class="mb-5" data-animate="fade-up">
+    <div class="text-center">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white mb-4" style="width: 80px; height: 80px;">
+            <i class="fas fa-info-circle fa-2x"></i>
+        </div>
+        <h1 class="display-5 fw-bold mb-3">Sistema de Evaluación NFTs y PI</h1>
+        <p class="lead text-muted mb-4">
+            Plataforma integral de evaluación con análisis de inteligencia artificial<br>
+            para el estudio de tokens no fungibles y propiedad intelectual
+        </p>
+    </div>
+</section>
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
+<!-- Características del Sistema -->
+<div class="section-header mb-4" data-animate="fade-up">
+    <h2 class="section-title">
+        <i class="fas fa-cogs me-2"></i>
+        Características del Sistema
+    </h2>
+    <p class="section-subtitle">Tecnología avanzada al servicio de la educación jurídica</p>
+</div>
 
-        .exam-header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .exam-header h2 {
-            font-size: 2.2em;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-
-        .student-info {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .exam-instructions {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            border-left: 5px solid #f39c12;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 30px;
-            color: #b7950b;
-            font-weight: 600;
-        }
-
-        .resource-reminder {
-            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
-            border: 2px solid #28a745;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 30px;
-            text-align: center;
-        }
-
-        .resource-reminder h4 {
-            color: #155724;
-            margin-bottom: 10px;
-        }
-
-        .resource-link {
-            display: inline-block;
-            background: #28a745;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 20px;
-            font-weight: 600;
-            margin-top: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .resource-link:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
-        .case-section {
-            margin: 30px;
-            background: white;
-            border-radius: 15px;
-            border: 2px solid #e9ecef;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .case-section:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        }
-
-        .case-info {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 25px;
-            border-bottom: 3px solid #3498db;
-        }
-
-        .case-info h3 {
-            color: #2c3e50;
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .case-info p {
-            color: #495057;
-            line-height: 1.7;
-            font-size: 1.1em;
-        }
-
-        .question-block {
-            padding: 25px;
-            border: none;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .question-block:last-child {
-            border-bottom: none;
-        }
-
-        .question-block legend {
-            font-weight: 700;
-            color: #2c3e50;
-            font-size: 1.2em;
-            margin-bottom: 15px;
-            padding: 0 10px;
-            background: white;
-        }
-
-        .question-text {
-            background: linear-gradient(135deg, #f1f3f4 0%, #e8eaf6 100%);
-            border-left: 4px solid #3f51b5;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 1.1em;
-            line-height: 1.6;
-            color: #2c3e50;
-        }
-
-        .bool-inputs {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .bool-inputs label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 25px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border: 2px solid #dee2e6;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            font-size: 1.1em;
-        }
-
-        .bool-inputs label:hover {
-            background: linear-gradient(135deg, #e2e6ea 0%, #dae0e5 100%);
-            transform: translateY(-2px);
-        }
-
-        .bool-inputs input[type="radio"]:checked + label,
-        .bool-inputs label:has(input[type="radio"]:checked) {
-            background: linear-gradient(135deg, #3498db 0%, #2ecc71 100%);
-            color: white;
-            border-color: #2980b9;
-        }
-
-        .bool-inputs input[type="radio"] {
-            width: 20px;
-            height: 20px;
-        }
-
-        textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 20px;
-            border: 2px solid #dee2e6;
-            border-radius: 15px;
-            font-family: inherit;
-            font-size: 1em;
-            line-height: 1.6;
-            resize: vertical;
-            background: #f8f9fa;
-            transition: all 0.3s ease;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #3498db;
-            background: white;
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.1);
-        }
-
-        textarea::placeholder {
-            color: #6c757d;
-            font-style: italic;
-        }
-
-        .submit-section {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            padding: 40px;
-            text-align: center;
-        }
-
-        .btn-submit {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-            color: white;
-            padding: 20px 50px;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.3em;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.3);
-            margin-bottom: 20px;
-        }
-
-        .btn-submit:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(231, 76, 60, 0.4);
-        }
-
-        .btn-submit:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .submit-warning {
-            color: #ecf0f1;
-            font-size: 1.1em;
-            max-width: 500px;
-            margin: 0 auto;
-            line-height: 1.6;
-        }
-
-        .nft-indicator {
-            display: inline-block;
-            background: linear-gradient(135deg, #9c27b0 0%, #673ab7 100%);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.9em;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
-        .legal-reference {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-            border-left: 4px solid #ff9800;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 0 10px 10px 0;
-            font-size: 0.95em;
-            color: #e65100;
-        }
-
-        .progress-indicator {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
-            z-index: 1000;
-            transition: width 0.3s ease;
-        }
-
-        .case-number {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.2em;
-        }
-
-        .institution-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .institution-logo {
-            max-height: 60px;
-            filter: brightness(0) invert(1);
-        }
-
-        .institution-info {
-            text-align: left;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-            }
-
-            .case-section, .exam-instructions, .resource-reminder {
-                margin: 15px;
-            }
-
-            .bool-inputs {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .bool-inputs label {
-                justify-content: center;
-            }
-
-            .institution-header {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .institution-info {
-                text-align: center;
-            }
-        }
-
-        /* Animación de carga */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .case-section {
-            animation: fadeIn 0.6s ease-out;
-        }
-    </style>
-</head>
-<body>
-    <div class="progress-indicator" id="progress-bar"></div>
-    
-    <div class="container">
-        <div class="exam-header">
-            <div class="institution-header">
-                <img src="legaltech.com.gt/themeoj/img/logoBlanco.png" alt="Organismo Judicial de Guatemala" class="institution-logo">
-                <div class="institution-info">
-                    <h2>Examen Integral - NFTs y Propiedad Intelectual</h2>
-                    <p><strong>Organismo Judicial de Guatemala</strong></p>
+<div class="row mb-5">
+    <div class="col-lg-4 mb-4" data-animate="fade-up" data-animate-delay="100ms">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-robot fa-lg"></i>
                 </div>
-            </div>
-            
-            <div class="student-info">
-                <p><strong>Participante:</strong> {{ student_name }} | <strong>Identificación:</strong> {{ student_carne }}</p>
-                <p><strong>Fecha:</strong> <span id="exam-date"></span> | <strong>Hora de inicio:</strong> <span id="start-time"></span></p>
-            </div>
-        </div>
-
-        <div class="resource-reminder">
-            <h4>📚 Documento de Referencia Obligatorio</h4>
-            <p>Asegúrese de haber leído el documento base antes de continuar:</p>
-            <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" target="_blank" class="resource-link">
-                📄 NFTs: Estudio sobre Propiedad Intelectual - Universidad de Chile
-            </a>
-        </div>
-
-        <div class="exam-instructions">
-            <strong>📋 INSTRUCCIONES:</strong> Complete todos los 5 casos sobre NFTs y propiedad intelectual. Cada caso presenta 2 afirmaciones que debe evaluar como Verdadero/Falso, proporcionando justificación jurídica detallada basada en la legislación guatemalteca y los principios estudiados en el documento de referencia.
-        </div>
-
-        <form method="post" action="{{ url_for('submit_comprehensive') }}" id="comprehensive-exam-form">
-            {% for case_data in all_cases_data %}
-            <section class="case-section" data-case="{{ case_data.case.case_id }}">
-                <div class="case-info">
-                    <h3>
-                        <div class="case-number">{{ case_data.case.case_id }}</div>
-                        {{ case_data.case.title }}
-                        <span class="nft-indicator">NFT</span>
-                    </h3>
-                    <p>{{ case_data.case.description }}</p>
-                    
-                    <div class="legal-reference">
-                        <strong>⚖️ Marco Legal de Referencia:</strong> 
-                        {% if case_data.case.case_id == 1 %}
-                        Arts. 3, 13 Ley de Propiedad Intelectual Guatemala
-                        {% elif case_data.case.case_id == 2 %}
-                        Ley de Firma Electrónica Avanzada Guatemala, Autonomía de la voluntad
-                        {% elif case_data.case.case_id == 3 %}
-                        Art. 9 LPI, Derechos morales y patrimoniales
-                        {% elif case_data.case.case_id == 4 %}
-                        Arts. 16, 17 LPI - Comunicación pública
-                        {% elif case_data.case.case_id == 5 %}
-                        Arts. 71, 42 Constitución de Guatemala, Principio de legalidad
-                        {% endif %}
-                    </div>
-                </div>
-                
-                {% for question in case_data.questions %}
-                <fieldset class="question-block" data-question-index="case_{{ case_data.case.case_id }}_{{ loop.index0 }}">
-                    <legend>Caso {{ case_data.case.case_id }} - Afirmación {{ loop.index }}:</legend>
-                    
-                    <div class="question-text">{{ question }}</div>
-                    
-                    <div class="bool-inputs">
-                        <label>
-                            <input type="radio" name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" value="true" required>
-                            ✓ Verdadero
-                        </label>
-                        <label>
-                            <input type="radio" name="case_{{ case_data.case.case_id }}_bool_{{ loop.index0 }}" value="false" required>
-                            ✗ Falso
-                        </label>
-                    </div>
-                    
-                    <label for="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}">
-                        <strong>Justificación Jurídica:</strong> <small>(Debe mencionar artículos específicos y principios jurídicos)</small>
-                    </label>
-                    <textarea id="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
-                              name="case_{{ case_data.case.case_id }}_reason_{{ loop.index0 }}" 
-                              rows="5" required 
-                              placeholder="Proporcione una justificación jurídica detallada citando artículos específicos de la Ley de Propiedad Intelectual de Guatemala, principios doctrinales sobre NFTs y el análisis del documento de referencia de la Universidad de Chile. Explique la diferencia entre soporte digital y obra intelectual, y cómo se aplica al caso concreto..."></textarea>
-                </fieldset>
-                {% endfor %}
-            </section>
-            {% endfor %}
-            
-            <div class="submit-section">
-                <button type="submit" class="btn-submit" id="submit-btn">
-                    🚀 Enviar Examen Completo
-                </button>
-                <p class="submit-warning">
-                    ⚠️ <strong>IMPORTANTE:</strong> Verifique que todas las respuestas estén completas antes de enviar. 
-                    El sistema evaluará automáticamente su comprensión de NFTs, smart contracts, y aplicación 
-                    de la legislación guatemalteca. No podrá modificar sus respuestas después del envío.
+                <h5 class="card-title">Evaluación con IA</h5>
+                <p class="card-text text-muted">
+                    Sistema de evaluación automatizada usando inteligencia artificial Claude para analizar respuestas jurídicas complejas.
                 </p>
             </div>
-        </form>
+        </div>
     </div>
 
-    <script>
-        // Configuración inicial
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mostrar fecha y hora
-            const now = new Date();
-            document.getElementById('exam-date').textContent = now.toLocaleDateString('es-GT');
-            document.getElementById('start-time').textContent = now.toLocaleTimeString('es-GT');
-            
-            // Inicializar barra de progreso
-            updateProgressBar();
-        });
+    <div class="col-lg-4 mb-4" data-animate="fade-up" data-animate-delay="200ms">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-link fa-lg"></i>
+                </div>
+                <h5 class="card-title">Especialización NFT</h5>
+                <p class="card-text text-muted">
+                    Casos de estudio específicos sobre tokens no fungibles, smart contracts y su marco legal en Guatemala.
+                </p>
+            </div>
+        </div>
+    </div>
 
-        // Control de progreso
-        function updateProgressBar() {
-            const totalQuestions = document.querySelectorAll('textarea').length;
-            const answeredQuestions = Array.from(document.querySelectorAll('textarea'))
-                .filter(textarea => textarea.value.trim().length > 10).length;
+    <div class="col-lg-4 mb-4" data-animate="fade-up" data-animate-delay="300ms">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-info-subtle text-info mb-3" style="width: 60px; height: 60px;">
+                    <i class="fas fa-chart-line fa-lg"></i>
+                </div>
+                <h5 class="card-title">Analytics Avanzado</h5>
+                <p class="card-text text-muted">
+                    Dashboard completo para instructores con métricas detalladas y análisis de rendimiento estudiantil.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estructura del Examen -->
+<div class="card mb-5" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>
+            Estructura del Examen Integral
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row text-center mb-4">
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-primary">5</div>
+                    <div class="metric-label">Casos de Estudio</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-success">10</div>
+                    <div class="metric-label">Preguntas Totales</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-info">20</div>
+                    <div class="metric-label">Puntos por Caso</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value text-warning">100</div>
+                    <div class="metric-label">Puntos Total</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-light border-start border-4 border-primary">
+            <h6 class="alert-heading">
+                <i class="fas fa-balance-scale me-2"></i>
+                Evaluación por Pregunta (10 puntos)
+            </h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge badge-success me-3">5 pts</div>
+                        <div>
+                            <strong>Veracidad:</strong><br>
+                            <small class="text-muted">Respuesta correcta (Verdadero/Falso)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge badge-primary me-3">5 pts</div>
+                        <div>
+                            <strong>Argumentación IA:</strong><br>
+                            <small class="text-muted">Justificación evaluada automáticamente</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Casos de Estudio -->
+<div class="section-header mb-4" data-animate="fade-up">
+    <h2 class="section-title">
+        <i class="fas fa-gavel me-2"></i>
+        Casos de Estudio Incluidos
+    </h2>
+    <p class="section-subtitle">Situaciones jurídicas reales en el contexto de NFTs y propiedad intelectual</p>
+</div>
+
+<div class="accordion mb-5" id="casesAccordion">
+    <!-- Caso 1 -->
+    <div class="accordion-item" data-animate="fade-up">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case1">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge badge-primary">1</div>
+                    <div>
+                        <strong>NFT como Título Traslativo de Dominio</strong>
+                        <div class="text-muted small mt-1">Transferencia automática de derechos patrimoniales</div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+        <div id="case1" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
+            <div class="accordion-body">
+                <p><strong>Descripción:</strong> Análisis de si la compra de un NFT otorga automáticamente derechos patrimoniales sobre la obra intelectual protegida.</p>
+                <div class="badge badge-outline me-2">Art. 3 LPI Guatemala</div>
+                <div class="badge badge-outline me-2">Art. 13 LPI</div>
+                <div class="badge badge-outline">Separación obra-soporte</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Caso 2 -->
+    <div class="accordion-item" data-animate="fade-up">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case2">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge badge-primary">2</div>
+                    <div>
+                        <strong>Smart Contracts y Regalías Automáticas</strong>
+                        <div class="text-muted small mt-1">Validez jurídica de contratos inteligentes</div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+        <div id="case2" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
+            <div class="accordion-body">
+                <p><strong>Descripción:</strong> Estudio de la validez legal de regalías programadas en smart contracts ERC-721 bajo la legislación guatemalteca.</p>
+                <div class="badge badge-outline me-2">Ley de Firma Electrónica Avanzada</div>
+                <div class="badge badge-outline me-2">Autonomía contractual</div>
+                <div class="badge badge-outline">Smart contracts</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Caso 3 -->
+    <div class="accordion-item" data-animate="fade-up">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge badge-primary">3</div>
+                    <div>
+                        <strong>Representación Digital vs Reproducción</strong>
+                        <div class="text-muted small mt-1">Naturaleza jurídica de la representación NFT</div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+        <div id="case3" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
+            <div class="accordion-body">
+                <p><strong>Descripción:</strong> Análisis de si la representación digital en un NFT constituye reproducción en el sentido del derecho de autor.</p>
+                <div class="badge badge-outline me-2">Art. 9 LPI</div>
+                <div class="badge badge-outline me-2">Derechos morales/patrimoniales</div>
+                <div class="badge badge-outline">Fijación digital</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Caso 4 -->
+    <div class="accordion-item" data-animate="fade-up">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge badge-primary">4</div>
+                    <div>
+                        <strong>Uso Público de NFT Musical</strong>
+                        <div class="text-muted small mt-1">Comunicación pública y licencias</div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+        <div id="case4" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
+            <div class="accordion-body">
+                <p><strong>Descripción:</strong> Evaluación de si la propiedad de un NFT musical otorga derechos de comunicación pública para eventos comerciales.</p>
+                <div class="badge badge-outline me-2">Arts. 16-17 LPI</div>
+                <div class="badge badge-outline me-2">Comunicación pública</div>
+                <div class="badge badge-outline">Independencia de derechos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Caso 5 -->
+    <div class="accordion-item" data-animate="fade-up">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#case5">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge badge-primary">5</div>
+                    <div>
+                        <strong>NFT y Derechos Constitucionales</strong>
+                        <div class="text-muted small mt-1">Balance entre acceso cultural y protección autoral</div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+        <div id="case5" class="accordion-collapse collapse" data-bs-parent="#casesAccordion">
+            <div class="accordion-body">
+                <p><strong>Descripción:</strong> Análisis del equilibrio constitucional entre el derecho de acceso a la cultura y la protección de derechos patrimoniales.</p>
+                <div class="badge badge-outline me-2">Arts. 71 y 42 CN</div>
+                <div class="badge badge-outline me-2">Equilibrio constitucional</div>
+                <div class="badge badge-outline">Término de protección</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Criterios de Evaluación IA -->
+<div class="card mb-5" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-brain me-2"></i>
+            Criterios de Evaluación con Inteligencia Artificial
+        </h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-4">
+            El sistema utiliza un modelo avanzado de IA (Claude) para evaluar las justificaciones jurídicas según 9 criterios específicos:
+        </p>
+        
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">1</div>
+                    <div>
+                        <h6 class="mb-1">Aplicación normativa guatemalteca</h6>
+                        <small class="text-muted">Uso correcto de la Ley de Propiedad Intelectual de Guatemala</small>
+                    </div>
+                </div>
+            </div>
             
-            const progress = (answeredQuestions / totalQuestions) * 100;
-            document.getElementById('progress-bar').style.width = progress + '%';
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">2</div>
+                    <div>
+                        <h6 class="mb-1">Distinción soporte-obra</h6>
+                        <small class="text-muted">Comprensión de la separación entre soporte digital y obra protegida</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">3</div>
+                    <div>
+                        <h6 class="mb-1">Conocimiento de smart contracts</h6>
+                        <small class="text-muted">Aspectos jurídicos de contratos inteligentes</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">4</div>
+                    <div>
+                        <h6 class="mb-1">Derechos patrimoniales y morales</h6>
+                        <small class="text-muted">Diferenciación y aplicación correcta</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">5</div>
+                    <div>
+                        <h6 class="mb-1">Marco constitucional</h6>
+                        <small class="text-muted">Balance entre derechos culturales y autorales</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">6</div>
+                    <div>
+                        <h6 class="mb-1">Coherencia argumentativa</h6>
+                        <small class="text-muted">Lógica y estructura de la argumentación</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">7</div>
+                    <div>
+                        <h6 class="mb-1">Uso de jurisprudencia/doctrina</h6>
+                        <small class="text-muted">Referencias apropiadas a fuentes legales</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">8</div>
+                    <div>
+                        <h6 class="mb-1">Aplicación práctica</h6>
+                        <small class="text-muted">Conexión teoría-práctica en NFTs</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-12 mb-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="badge badge-primary">9</div>
+                    <div>
+                        <h6 class="mb-1">Capacidad crítica jurídica</h6>
+                        <small class="text-muted">Análisis crítico y fundamentado de situaciones complejas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <strong>Cálculo de Puntuación:</strong> 
+            El sistema calcula el promedio de los 9 criterios (escala 1-5) y lo multiplica por 5 para obtener la puntuación sobre 5 puntos por cada justificación.
+        </div>
+    </div>
+</div>
+
+<!-- Documento de Referencia -->
+<div class="card mb-5" data-animate="fade-up">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-book-open me-2"></i>
+            Documento Base de Referencia
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-lg-3 text-center mb-3 mb-lg-0">
+                <div class="d-inline-flex align-items-center justify-content-center rounded bg-primary-subtle text-primary" style="width: 100px; height: 120px;">
+                    <i class="fas fa-file-pdf fa-3x"></i>
+                </div>
+            </div>
+            <div class="col-lg-9">
+                <h5 class="mb-2">
+                    "NFTs: Un estudio sobre el alcance de la propiedad intelectual en los tokens no fungibles"
+                </h5>
+                <div class="text-muted mb-3">
+                    <strong>Universidad de Chile - Facultad de Derecho</strong><br>
+                    <strong>Autor:</strong> Estanislao Dufey Ruiz-Tagle<br>
+                    <strong>Profesor Guía:</strong> Santiago Schuster<br>
+                    <strong>Fecha:</strong> Marzo 2024
+                </div>
+                <p class="mb-3">
+                    Memoria académica que analiza la intersección entre tokens no fungibles y propiedad intelectual, 
+                    abordando aspectos técnicos, jurídicos y prácticos de esta nueva tecnología.
+                </p>
+                <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" 
+                   target="_blank" 
+                   class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-2"></i>
+                    Acceder al Documento
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información Técnica -->
+<div class="section-header mb-4" data-animate="fade-up">
+    <h2 class="section-title">
+        <i class="fas fa-code me-2"></i>
+        Información Técnica
+    </h2>
+    <p class="section-subtitle">Detalles del sistema y tecnologías utilizadas</p>
+</div>
+
+<div class="row mb-5">
+    <div class="col-lg-6 mb-4" data-animate="fade-up" data-animate-delay="100ms">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-server me-2 text-primary"></i>
+                    Tecnologías Backend
+                </h6>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">Python</span>
+                        Flask 3.0 - Framework web
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">SQLite</span>
+                        Base de datos integrada
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">Claude API</span>
+                        Evaluación con IA avanzada
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">Docker</span>
+                        Containerización y deployment
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4" data-animate="fade-up" data-animate-delay="200ms">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-palette me-2 text-success"></i>
+                    Tecnologías Frontend
+                </h6>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">PROFINS XXIV</span>
+                        Framework CSS/JS personalizado
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">Inter Font</span>
+                        Tipografía moderna y legible
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">Font Awesome</span>
+                        Sistema de iconos
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge badge-outline me-2">Responsive</span>
+                        Diseño adaptable
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contacto y Soporte -->
+<div class="text-center py-5" data-animate="fade-up">
+    <h3 class="mb-4">¿Necesita soporte técnico?</h3>
+    <p class="text-muted mb-4">
+        Para consultas técnicas, reportes de errores o sugerencias de mejora, 
+        contáctese con el equipo de desarrollo.
+    </p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a href="https://legaltech.com.gt" class="btn btn-outline btn-lg">
+            <i class="fas fa-globe me-2"></i>
+            LegalTech Guatemala
+        </a>
+        <button class="btn btn-primary btn-lg" onclick="showSystemInfo()">
+            <i class="fas fa-info-circle me-2"></i>
+            Info del Sistema
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para mostrar información del sistema
+    window.showSystemInfo = function() {
+        const systemInfo = {
+            version: '2.0.0',
+            framework: 'PROFINS XXIV',
+            lastUpdate: '2025-01-20',
+            totalCases: 5,
+            totalQuestions: 10,
+            aiModel: 'Claude (Anthropic)'
+        };
+        
+        let infoHtml = '<div class="table-responsive"><table class="table table-sm">';
+        Object.entries(systemInfo).forEach(([key, value]) => {
+            infoHtml += `<tr><td><strong>${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</strong></td><td>${value}</td></tr>`;
+        });
+        infoHtml += '</table></div>';
+        
+        if (window.Profins && window.Profins.showModal) {
+            window.Profins.showModal('Información del Sistema', infoHtml);
+        } else {
+            alert('Información del Sistema:\n' + JSON.stringify(systemInfo, null, 2));
         }
-
-        // Monitorear cambios en respuestas
-        document.querySelectorAll('textarea').forEach(textarea => {
-            textarea.addEventListener('input', function() {
-                updateProgressBar();
-                
-                // Advertencia sobre respuestas muy cortas
-                if (this.value.length > 0 && this.value.length < 50) {
-                    this.style.borderColor = '#f39c12';
-                } else if (this.value.length >= 50) {
-                    this.style.borderColor = '#27ae60';
-                } else {
-                    this.style.borderColor = '#dee2e6';
-                }
-            });
-        });
-
-        // Validación antes del envío
-        document.getElementById('comprehensive-exam-form').addEventListener('submit', function(e) {
-            const textareas = document.querySelectorAll('textarea');
-            const radios = document.querySelectorAll('input[type="radio"]:checked');
-            
-            // Verificar que todos los campos estén completados
-            let incompleteAnswers = [];
-            
-            textareas.forEach((textarea, index) => {
-                if (textarea.value.trim().length < 20) {
-                    incompleteAnswers.push(`Pregunta ${Math.floor(index/2) + 1}.${(index % 2) + 1}`);
-                }
-            });
-            
-            if (radios.length < 10) {
-                alert('⚠️ Debe seleccionar Verdadero o Falso para todas las afirmaciones.');
-                e.preventDefault();
-                return;
-            }
-            
-            if (incompleteAnswers.length > 0) {
-                alert(`⚠️ Las siguientes respuestas necesitan más desarrollo:\n${incompleteAnswers.join(', ')}\n\nPor favor proporcione justificaciones más detalladas (mínimo 20 caracteres por respuesta).`);
-                e.preventDefault();
-                return;
-            }
-            
-            // Confirmación final
-            if (!confirm('🎓 ¿Está seguro de que desea enviar su examen?\n\nUna vez enviado no podrá realizar cambios.\n\nEl sistema analizará automáticamente sus respuestas sobre NFTs y propiedad intelectual.')) {
-                e.preventDefault();
-                return;
-            }
-            
-            // Deshabilitar botón para evitar doble envío
-            document.getElementById('submit-btn').disabled = true;
-            document.getElementById('submit-btn').textContent = '⏳ Enviando...';
-        });
-
-        // Auto-guardado local (opcional)
-        function autoSave() {
-            const formData = new FormData(document.getElementById('comprehensive-exam-form'));
-            const data = Object.fromEntries(formData.entries());
-            localStorage.setItem('nft_exam_progress', JSON.stringify(data));
-        }
-
-        // Guardar progreso cada 30 segundos
-        setInterval(autoSave, 30000);
-
-        // Recuperar progreso si existe
-        window.addEventListener('load', function() {
-            const savedProgress = localStorage.getItem('nft_exam_progress');
-            if (savedProgress) {
-                const data = JSON.parse(savedProgress);
-                Object.keys(data).forEach(key => {
-                    const element = document.querySelector(`[name="${key}"]`);
-                    if (element) {
-                        if (element.type === 'radio') {
-                            if (element.value === data[key]) {
-                                element.checked = true;
-                            }
-                        } else {
-                            element.value = data[key];
-                        }
-                    }
-                });
-                updateProgressBar();
-            }
-        });
-
-        // Limpiar progreso después del envío exitoso
-        window.addEventListener('beforeunload', function() {
-            if (document.getElementById('submit-btn').disabled) {
-                localStorage.removeItem('nft_exam_progress');
-            }
-        });
-    </script>
-</body>
-</html>
+    };
+    
+    console.log('✅ Página de información cargada');
+});
+</script>
+{% endblock %}
