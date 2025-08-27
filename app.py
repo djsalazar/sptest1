@@ -860,7 +860,7 @@ def from_json_filter(json_string):
         return {}
 
 # Register filters
-app.jinja_env.filters['from_json'] = from_json_filter
+
 
 @app.context_processor
 def inject_globals():
@@ -870,6 +870,35 @@ def inject_globals():
         'exam_deadline': EXAM_DEADLINE,
         'is_exam_blocked': is_exam_blocked()
     }
+
+
+def flatten_filter(nested_list):
+    """Filtro personalizado para aplanar listas anidadas en Jinja2"""
+    def flatten_recursive(items):
+        result = []
+        for item in items:
+            if isinstance(item, (list, tuple)):
+                result.extend(flatten_recursive(item))
+            else:
+                result.append(item)
+        return result
+    
+    try:
+        if nested_list is None:
+            return []
+        return flatten_recursive(nested_list)
+    except:
+        return []
+
+def from_json_filter(json_string):
+    """Filtro para convertir JSON string a dict en templates"""
+    try:
+        return json.loads(json_string) if json_string else {}
+    except:
+        return {}
+
+app.jinja_env.filters['from_json'] = from_json_filter
+app.jinja_env.filters['flatten'] = flatten_filter  
 
 ###############################################################################
 # App startup
