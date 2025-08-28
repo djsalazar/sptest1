@@ -36,7 +36,7 @@ DB_PATH = BASE_DIR / "data" / "exam.db"
 
 # Exam deadline (Guatemala timezone GMT-6)
 GUATEMALA_TZ = timezone(timedelta(hours=-6))
-EXAM_DEADLINE = datetime(2025, 8, 27, 23, 59, 0, tzinfo=GUATEMALA_TZ)
+EXAM_DEADLINE = datetime(2025, 8, 30, 23, 59, 0, tzinfo=GUATEMALA_TZ)
 
 # Flask setup
 app = Flask(__name__)
