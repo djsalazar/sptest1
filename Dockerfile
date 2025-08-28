@@ -8,11 +8,17 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 WORKDIR /app
 COPY . /app
 
-# Expose port the app runs on
+# Create data directory with proper permissions
+RUN mkdir -p /app/data && chmod 755 /app/data
+
+# Ensure proper ownership
+RUN chown -R root:root /app && chmod -R 755 /app
+
+# Expose port
 EXPOSE 8000
 
-# By default, set the environment to production
+# Set environment to production
 ENV FLASK_ENV=production
 
-# Start the Flask application
+# Start Flask application
 CMD ["python", "app.py"]

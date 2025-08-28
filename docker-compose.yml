@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   exam_app:
     build: .
@@ -8,22 +10,6 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
     restart: unless-stopped
-    # 🔧 PERSISTENCIA: Volúmenes para mantener datos
     volumes:
-      - exam_data:/app/exam.db
-      - app_data:/app
-    # 📁 Opcional: Para desarrollo, montar el código fuente
-    # volumes:
-    #   - ./:/app
-    #   - exam_data:/app/exam.db
-
-# 🗄️ VOLÚMENES: Definir almacenamiento persistente
-volumes:
-  exam_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data
-  app_data:
-    driver: local
+      - ./data:/app/data
+    user: "0:0"

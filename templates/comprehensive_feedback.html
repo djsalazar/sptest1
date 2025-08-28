@@ -1,206 +1,173 @@
 {% extends "base.html" %}
-{% block title %}Resultados del Examen{% endblock %}
-{% block page_title %}Resultados de tu Evaluación{% endblock %}
+
+{% block title %}Resultados de Evaluación - NFT y Propiedad Intelectual{% endblock %}
 
 {% block content %}
-<div class="results-container">
+<div class="container mt-4">
     <!-- Header con información del estudiante -->
-    <div class="results-header" data-animate="fade-up">
-        <div class="student-info">
-            <h2><i class="fas fa-user-graduate me-2"></i>{{ student_name }}</h2>
-            <p class="student-details">
-                <span class="badge badge-light me-2">ID: {{ student_carne }}</span>
-                <span class="badge badge-info">Duración: {{ duration_minutes }} minutos</span>
-            </p>
-        </div>
-        
-        <div class="score-summary">
-            <div class="total-score">
-                <div class="score-value {% if total_score >= 18 %}text-success{% elif total_score >= 12 %}text-warning{% else %}text-danger{% endif %}">
-                    {{ '%.1f'|format(total_score) }}/{{ max_score }}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-graduation-cap me-2"></i>
+                        Evaluación Completada - NFTs y Propiedad Intelectual
+                    </h3>
                 </div>
-                <div class="score-label">Puntuación Total</div>
-            </div>
-            <div class="score-percentage">
-                <div class="percentage-value">{{ '%.0f'|format((total_score / max_score) * 100) }}%</div>
-                <div class="percentage-label">
-                    {% if (total_score / max_score) * 100 >= 60 %}
-                        <span class="text-success"><i class="fas fa-check-circle me-1"></i>Aprobado</span>
-                    {% else %}
-                        <span class="text-danger"><i class="fas fa-times-circle me-1"></i>No Aprobado</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Resumen estadístico -->
-    <div class="statistics-summary mb-4" data-animate="fade-up">
-        <div class="row">
-            <div class="col-md-3 col-6 mb-3">
-                <div class="stat-card">
-                    <div class="stat-value text-primary">
-                        {% set correct_answers = 0 %}
-                        {% for case_data in all_cases_data %}
-                            {% for answer in case_data.answers %}
-                                {% if answer.user_bool == answer.correct_bool %}
-                                    {% set correct_answers = correct_answers + 1 %}
-                                {% endif %}
-                            {% endfor %}
-                        {% endfor %}
-                        {{ correct_answers }}/10
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Estudiante:</strong> {{ student_name }}</p>
+                            <p><strong>Carné:</strong> {{ student_carne }}</p>
+                            <p><strong>Duración:</strong> {{ duration_minutes }} minutos</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <div class="display-4 text-primary">
+                                <strong>{{ "%.1f"|format(total_score) }}/30.0</strong>
+                            </div>
+                            <p class="text-muted">Puntuación Final</p>
+                        </div>
                     </div>
-                    <div class="stat-label">Respuestas Correctas</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6 mb-3">
-                <div class="stat-card">
-                    <div class="stat-value text-info">{{ all_cases_data|length }}</div>
-                    <div class="stat-label">Casos Completados</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6 mb-3">
-                <div class="stat-card">
-                    <div class="stat-value {% if total_penalties > 0 %}text-warning{% else %}text-success{% endif %}">
-                        {% if total_penalties > 0 %}
-                            -{{ '%.1f'|format(total_penalties) }}
-                        {% else %}
-                            0.0
-                        {% endif %}
-                    </div>
-                    <div class="stat-label">Penalizaciones</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6 mb-3">
-                <div class="stat-card">
-                    <div class="stat-value {% if paste_attempts > 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ paste_attempts }}
-                    </div>
-                    <div class="stat-label">Copy/Paste Detectado</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Resultados por caso -->
+    <!-- Resumen de Evaluación con IA -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-robot me-2"></i>
+                        Análisis Inteligente con IA
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Mostrar general_feedback aquí -->
+                    <div class="alert alert-info">
+                        {{ general_feedback|safe if general_feedback else "Evaluación completada sin análisis de IA específico." }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evaluación Detallada por Casos -->
     {% for case_data in all_cases_data %}
-    <div class="case-result-card mb-4" data-animate="fade-up">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
-                <div class="case-number">{{ loop.index }}</div>
-                <h5 class="mb-0">{{ case_data.case.title }}</h5>
-            </div>
-            <div class="case-score">
-                <div class="score-badge {% if case_data.score >= 4.5 %}badge-success{% elif case_data.score >= 3 %}badge-warning{% else %}badge-danger{% endif %}">
-                    {{ '%.1f'|format(case_data.score) }}/6.0
-                </div>
-                <div class="score-percentage-small">
-                    {{ '%.0f'|format((case_data.score / 6.0) * 100) }}%
-                </div>
-            </div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-gavel me-2"></i>
+                Caso {{ case_data.case.case_id }}: {{ case_data.case.title }}
+            </h5>
+            <small class="text-muted">{{ case_data.score|round(1) }}/6.0 puntos</small>
         </div>
-
         <div class="card-body">
-            <div class="case-description mb-4">
-                <strong>Descripción del Caso:</strong>
-                <p class="text-muted mt-2">{{ case_data.case.description }}</p>
-            </div>
-
-            <!-- Preguntas del Caso -->
-            {% for answer in case_data.answers %}
-            <div class="question-result mb-4">
-                <div class="question-result-header">
-                    <h6 class="mb-3">
-                        <span class="badge {% if answer.score >= 2.4 %}badge-success{% elif answer.score >= 1.5 %}badge-warning{% else %}badge-danger{% endif %} me-2">
-                            {{ '%.1f'|format(answer.score) }}/3.0
-                        </span>
-                        Pregunta {{ loop.index }}
-                    </h6>
+            <p class="text-muted">{{ case_data.case.description[:200] }}...</p>
+            
+            <!-- Preguntas del caso -->
+            {% for i in range(case_data.answers|length) %}
+            <div class="question-evaluation mb-4 p-3 border rounded">
+                <h6 class="text-primary">Pregunta {{ i + 1 }}</h6>
+                <p class="question-text">{{ case_data.case.questions[i].text }}</p>
+                
+                <!-- Respuesta del estudiante -->
+                <div class="student-answer mb-3">
+                    <h6 class="text-secondary">Su respuesta:</h6>
+                    <p><strong>{{ "Verdadero" if case_data.answers[i].user_bool else "Falso" }}</strong></p>
+                    <blockquote class="blockquote">
+                        <p>"{{ case_data.answers[i].user_reason }}"</p>
+                    </blockquote>
                 </div>
-
-                <!-- Question Text -->
-                <div class="question-content bg-light rounded p-3 mb-3">
-                    <strong>Enunciado:</strong> {{ answer.question_text }}
-                </div>
-
-                <!-- Respuesta y Análisis -->
-                <div class="row">
-                    <div class="col-lg-6 mb-3">
-                        <div class="card border-start border-4 {% if answer.user_bool == answer.correct_bool %}border-success{% else %}border-danger{% endif %}">
-                            <div class="card-body">
-                                <h6 class="card-title">Tu Respuesta</h6>
-                                <p class="mb-2">
-                                    <strong>Selección:</strong> 
-                                    <span class="badge {% if answer.user_bool == answer.correct_bool %}badge-success{% else %}badge-danger{% endif %}">
-                                        {{ 'Verdadero' if answer.user_bool else 'Falso' }}
-                                        {% if answer.user_bool == answer.correct_bool %}
-                                            <i class="fas fa-check ms-1"></i>
-                                        {% else %}
-                                            <i class="fas fa-times ms-1"></i>
-                                        {% endif %}
-                                    </span>
-                                </p>
-                                <p class="mb-2">
-                                    <strong>Respuesta Correcta:</strong> 
-                                    <span class="text-muted">{{ 'Verdadero' if answer.correct_bool else 'Falso' }}</span>
-                                </p>
-                                <div class="mt-3">
-                                    <strong>Tu Justificación:</strong>
-                                    <div class="bg-light rounded p-2 mt-1">
-                                        <em>"{{ answer.user_reason }}"</em>
-                                    </div>
+                
+                <!-- Rúbrica Visual con JavaScript -->
+                <div class="rubrica-visual" id="rubrica-caso-{{ case_data.case.case_id }}-pregunta-{{ i }}">
+                    <h6 class="text-success">Evaluación por Criterios</h6>
+                    <div class="row">
+                        <!-- Los 9 criterios se mostrarán aquí con barras de progreso -->
+                        <div class="col-md-6">
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Opinión Fundada</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-info" style="width: 60%">3/5</div>
+                                </div>
+                            </div>
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Valores Éticos</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" style="width: 80%">4/5</div>
+                                </div>
+                            </div>
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Lenguaje Jurídico</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-warning" style="width: 40%">2/5</div>
+                                </div>
+                            </div>
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Citas y Precisión</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-info" style="width: 60%">3/5</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Estructura</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" style="width: 80%">4/5</div>
+                                </div>
+                            </div>
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Profundidad</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-info" style="width: 60%">3/5</div>
+                                </div>
+                            </div>
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Capacidad Crítica</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-warning" style="width: 50%">2.5/5</div>
+                                </div>
+                            </div>
+                            <div class="criterio-item mb-2">
+                                <label class="form-label small">Presentación</label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" style="width: 90%">4.5/5</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-lg-6 mb-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h6 class="card-title">
-                                    <i class="fas fa-robot me-2"></i>
-                                    Análisis IA
-                                </h6>
-                                
-                                <!-- Métricas de evaluación -->
-                                <div class="row text-center mb-3">
-                                    <div class="col-6">
-                                        <div class="metric-small">
-                                            <div class="metric-value {% if answer.breakdown.truth == 1.5 %}text-success{% else %}text-danger{% endif %}">
-                                                {{ '%.1f'|format(answer.breakdown.truth) }}
-                                            </div>
-                                            <div class="metric-label">Veracidad</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="metric-small">
-                                            <div class="metric-value {% if answer.breakdown.argument >= 1.2 %}text-success{% elif answer.breakdown.argument >= 0.8 %}text-warning{% else %}text-danger{% endif %}">
-                                                {{ '%.1f'|format(answer.breakdown.argument) }}
-                                            </div>
-                                            <div class="metric-label">Argumentación</div>
-                                        </div>
-                                    </div>
+                </div>
+                
+                <!-- Feedback de IA -->
+                <div class="ai-feedback mt-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-light text-success">
+                                    <small><strong><i class="fas fa-thumbs-up me-1"></i>Fortalezas</strong></small>
                                 </div>
-                                
-                                <!-- Penalizaciones si existen -->
-                                {% if answer.breakdown.get('paste_penalty', 0) > 0 %}
-                                    <div class="alert alert-warning">
-                                        <small>
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            <strong>Penalización:</strong> -{{ '%.2f'|format(answer.breakdown.paste_penalty) }} puntos por posible copy/paste
-                                        </small>
-                                    </div>
-                                {% endif %}
-                                
-                                <!-- Feedback de la IA -->
-                                {% if answer.breakdown.feedback %}
-                                    <div class="mt-3">
-                                        <strong>Feedback IA:</strong>
-                                        <div class="bg-info-subtle rounded p-2 mt-1">
-                                            <small>{{ answer.breakdown.feedback }}</small>
-                                        </div>
-                                    </div>
-                                {% endif %}
+                                <div class="card-body p-2">
+                                    <small class="fortalezas-text">
+                                        <!-- Aquí irá el feedback_fortalezas de la BD -->
+                                        Cargando feedback de fortalezas...
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-light text-warning">
+                                    <small><strong><i class="fas fa-lightbulb me-1"></i>Mejoras</strong></small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <small class="mejoras-text">
+                                        <!-- Aquí irá el feedback_mejoras de la BD -->
+                                        Cargando sugerencias de mejora...
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -211,214 +178,35 @@
     </div>
     {% endfor %}
 
-    <!-- Recomendaciones finales -->
-    <div class="recommendations-section" data-animate="fade-up">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-lightbulb me-2"></i>
-                    Recomendaciones para Mejora
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if (total_score / max_score) * 100 >= 80 %}
-                    <div class="alert alert-success">
-                        <h6 class="alert-heading">¡Excelente Rendimiento!</h6>
-                        <p class="mb-0">Has demostrado un sólido entendimiento de los conceptos de NFTs y Propiedad Intelectual. Continúa profundizando en los aspectos técnico-jurídicos de la blockchain.</p>
-                    </div>
-                {% elif (total_score / max_score) * 100 >= 60 %}
-                    <div class="alert alert-warning">
-                        <h6 class="alert-heading">Buen Rendimiento</h6>
-                        <p class="mb-0">Has aprobado satisfactoriamente. Considera revisar los conceptos de separación obra-soporte y los smart contracts para fortalecer tu comprensión.</p>
-                    </div>
-                {% else %}
-                    <div class="alert alert-info">
-                        <h6 class="alert-heading">Oportunidades de Mejora</h6>
-                        <p class="mb-0">Te recomendamos revisar el documento base de Universidad de Chile y profundizar en la legislación guatemalteca aplicable a NFTs y propiedad intelectual.</p>
-                    </div>
-                {% endif %}
-
-                <div class="study-resources mt-4">
-                    <h6>Recursos de Estudio Recomendados:</h6>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-book me-2 text-primary"></i>
-                            <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" target="_blank">
-                                NFTs: Un estudio sobre el alcance de la PI en tokens no fungibles
-                            </a>
-                        </li>
-                        <li><i class="fas fa-gavel me-2 text-secondary"></i>Ley de Propiedad Intelectual de Guatemala (Arts. 3, 9, 13, 16-17)</li>
-                        <li><i class="fas fa-balance-scale me-2 text-info"></i>Constitución de Guatemala (Arts. 42, 71)</li>
-                        <li><i class="fas fa-signature me-2 text-success"></i>Ley de Firma Electrónica Avanzada de Guatemala</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Acciones finales -->
-    <div class="final-actions text-center mt-5" data-animate="fade-up">
-        <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <button onclick="window.print()" class="btn btn-outline btn-lg">
-                <i class="fas fa-print me-2"></i>Imprimir Resultados
-            </button>
-            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
-                <i class="fas fa-home me-2"></i>Volver al Inicio
-            </a>
-        </div>
+    <!-- Acciones -->
+    <div class="text-center mt-4">
+        <a href="/" class="btn btn-primary">
+            <i class="fas fa-home me-2"></i>Volver al Inicio
+        </a>
+        <button class="btn btn-info" onclick="window.print()">
+            <i class="fas fa-print me-2"></i>Imprimir Resultados
+        </button>
     </div>
 </div>
 
-<!-- Estilos específicos para resultados -->
-<style>
-.results-container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.results-header {
-    background: linear-gradient(135deg, #3498db, #2c3e50);
-    color: white;
-    padding: 2rem;
-    border-radius: 12px;
-    margin-bottom: 2rem;
-    display: flex;
-    justify-content: between;
-    align-items: center;
-    gap: 2rem;
-    flex-wrap: wrap;
-}
-
-.student-info h2 {
-    margin: 0;
-    font-size: 1.5rem;
-}
-
-.score-summary {
-    display: flex;
-    gap: 2rem;
-    align-items: center;
-}
-
-.total-score, .score-percentage {
-    text-align: center;
-}
-
-.score-value, .percentage-value {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.score-label, .percentage-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-.statistics-summary .stat-card {
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.stat-label {
-    font-size: 0.85rem;
-    color: #666;
-    margin-top: 0.25rem;
-}
-
-.case-result-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-
-.case-result-card .card-header {
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    padding: 1.5rem;
-}
-
-.case-number {
-    width: 40px;
-    height: 40px;
-    background: #3498db;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-}
-
-.score-badge {
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
-}
-
-.score-percentage-small {
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.25rem;
-}
-
-.metric-small .metric-value {
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.metric-small .metric-label {
-    font-size: 0.8rem;
-    color: #666;
-}
-
-.question-result {
-    border-left: 4px solid #e9ecef;
-    padding-left: 1rem;
-    margin-left: 1rem;
-}
-
-.recommendations-section {
-    margin-top: 2rem;
-}
-
-@media (max-width: 768px) {
-    .results-header {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .score-summary {
-        justify-content: center;
-    }
-}
-</style>
-{% endblock %}
-
-{% block scripts %}
+<!-- Script para cargar datos reales de la BD -->
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Página de resultados cargada correctamente');
+document.addEventListener('DOMContentLoaded', function() {
+    // Aquí cargaremos los datos reales de evaluación desde la BD
+    // Por ahora mostramos placeholder, luego haremos la llamada AJAX
+    console.log('Cargando evaluaciones detalladas...');
     
-    // Animaciones de entrada suaves
-    const cards = document.querySelectorAll('[data-animate="fade-up"]');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = 'all 0.6s ease-out';
-        
-        setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 200);
-    });
+    // TODO: Hacer fetch a endpoint que devuelva las evaluaciones detalladas
+    // fetch('/api/evaluation-details/' + result_id)
+    //   .then(response => response.json())
+    //   .then(data => {
+    //       updateRubricaVisual(data);
+    //   });
 });
+
+function updateRubricaVisual(evaluations) {
+    // Función para actualizar las barras de progreso con datos reales
+    console.log('Actualizando visualización de rúbrica:', evaluations);
+}
 </script>
 {% endblock %}

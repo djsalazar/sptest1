@@ -7,6 +7,8 @@ import sqlite3
 import string
 import time
 import hashlib
+import secrets
+import re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -17,7 +19,7 @@ load_dotenv()
 
 import requests
 from flask import (Flask, g, redirect, render_template, request, session,
-                   url_for, flash)
+                   url_for, flash, jsonify)
 
 ###############################################################################
 # Configuration
@@ -29,14 +31,17 @@ CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 # Updated instructor password
 INSTRUCTOR_PASSWORD = "organismojudicial"
 
-# File path to the SQLite database
+# File path to the SQLite database (UPDATED FOR PERSISTENCE)
 BASE_DIR = Path(__file__).parent
+DATA_DIR = BASE_DIR / "data"
+DB_PATH = DATA_DIR / "exam.db"
 
-DB_PATH = BASE_DIR / "data" / "exam.db"
+# Ensure data directory exists
+DATA_DIR.mkdir(exist_ok=True)
 
 # Exam deadline (Guatemala timezone GMT-6)
 GUATEMALA_TZ = timezone(timedelta(hours=-6))
-EXAM_DEADLINE = datetime(2025, 8, 30, 23, 59, 0, tzinfo=GUATEMALA_TZ)
+EXAM_DEADLINE = datetime(2025, 8, 27, 23, 59, 0, tzinfo=GUATEMALA_TZ)
 
 # Flask setup
 app = Flask(__name__)
@@ -50,6 +55,13 @@ logger = logging.getLogger(__name__)
 print(f"CLAUDE_API_KEY configurado: {'Sí' if CLAUDE_API_KEY else 'No'}")
 if CLAUDE_API_KEY:
     print(f"CLAUDE_API_KEY (primeros 10 chars): {CLAUDE_API_KEY[:10]}...")
+
+print(f"Iniciando aplicación NFTs y Propiedad Intelectual...")
+print(f"LegalTechGT")
+print(f"Password de instructor: {INSTRUCTOR_PASSWORD}")
+print(f"Fecha límite del examen: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
+guatemala_now = datetime.now(GUATEMALA_TZ)
+print(f"Estado del examen: {'BLOQUEADO' if guatemala_now > EXAM_DEADLINE else 'ACTIVO'}")
 
 ###############################################################################
 # Data Models
@@ -78,42 +90,44 @@ class Question:
 
 class Case:
     """Representation of a legal case with associated questions."""
-
+    
     def __init__(self, case_id: int, title: str, description: str, questions: List[Question]):
         self.case_id = case_id
         self.title = title
         self.description = description
         self.questions = questions
 
-# Updated cases focused on NFTs and Intellectual Property
-CASES: Dict[int, Case] = {
+###############################################################################
+# Case Definitions
+###############################################################################
+
+CASES = {
     1: Case(
         case_id=1,
         title="NFT como Título Traslativo de Dominio",
         description=(
-            "Un museo guatemalteco subasta un NFT vinculado a una obra digital inédita. "
-            "El comprador sostiene que, por adquirir el NFT, se convierte en 'dueño absoluto' "
-            "de los derechos de explotación patrimonial de la obra. El comprador argumenta "
-            "que el NFT opera como un título que le transfiere automáticamente todos los "
-            "derechos sobre la obra intelectual protegida."
+            "María compra un NFT de una obra de arte digital por 2 ETH en OpenSea. El proyecto especifica en sus términos "
+            "y condiciones que la compra del NFT NO transfiere derechos de autor, solo otorga una licencia personal "
+            "no comercial para uso privado. Sin embargo, María interpreta que al comprar el NFT obtiene la propiedad "
+            "de la obra digital y puede usarla comercialmente. Analice la situación desde la perspectiva de la "
+            "separación obra-soporte y la cesión de derechos de autor."
         ),
         questions=[
             Question(
                 text=(
-                    "El NFT opera jurídicamente como un título traslativo de dominio sobre la "
-                    "obra protegida, sin necesidad de cesión expresa según la legislación guatemalteca."
+                    "La compra de un NFT automáticamente transfiere los derechos patrimoniales de autor "
+                    "de la obra digital asociada al comprador."
                 ),
                 correct=False,
-                keywords=["NFT", "título traslativo", "cesión expresa", "obra protegida", "art. 3 LPI", "art. 13 LPI"]
+                keywords=["derechos patrimoniales", "transferencia automática", "NFT", "cesión expresa"]
             ),
             Question(
                 text=(
-                    "La compra de un NFT implica automáticamente la adquisición de los derechos "
-                    "patrimoniales de la obra intelectual, aplicando el principio de que el soporte "
-                    "y la obra son jurídicamente idénticos."
+                    "Los términos y condiciones del proyecto NFT pueden limitar los derechos que adquiere "
+                    "el comprador, incluso si el NFT representa una obra protegida por derecho de autor."
                 ),
-                correct=False,
-                keywords=["derechos patrimoniales", "soporte", "obra intelectual", "separación soporte-obra"]
+                correct=True,
+                keywords=["términos y condiciones", "limitación de derechos", "contrato", "licencia"]
             ),
         ]
     ),
@@ -121,29 +135,28 @@ CASES: Dict[int, Case] = {
         case_id=2,
         title="Smart Contracts y Regalías Automáticas",
         description=(
-            "Un artista guatemalteco programa un smart contract ERC-721 que garantiza "
-            "regalías del 10% en cada reventa del NFT. El comprador alega que esa cláusula "
-            "es inválida porque nunca firmó un contrato físico y que el smart contract "
-            "carece de validez jurídica en Guatemala al no cumplir con los requisitos "
-            "formales tradicionales."
+            "Un artista crea una colección de NFTs con un smart contract que incluye regalías automáticas del 10% "
+            "para cada reventa. Después de 2 años, los compradores han revendido los NFTs múltiples veces y el "
+            "artista ha recibido regalías automáticas por cada transacción. Surge la pregunta: ¿estas regalías "
+            "automáticas programadas en blockchain tienen validez jurídica en Guatemala? ¿Qué sucede si un "
+            "comprador vende el NFT fuera de la plataforma original sin pagar regalías?"
         ),
         questions=[
             Question(
                 text=(
-                    "Los smart contracts carecen de validez jurídica en Guatemala porque "
-                    "no cumplen con los requisitos formales tradicionales de contratación."
+                    "Las regalías automáticas programadas en smart contracts tienen plena validez jurídica "
+                    "en Guatemala y son exigibles ante tribunales nacionales."
                 ),
                 correct=False,
-                keywords=["smart contracts", "validez jurídica", "requisitos formales", "autonomía de la voluntad"]
+                keywords=["smart contracts", "validez jurídica", "regalías", "enforcement", "Guatemala"]
             ),
             Question(
                 text=(
-                    "Las regalías programadas en un smart contract ERC-721 son jurídicamente "
-                    "exigibles si se fundamentan en la autonomía de la voluntad contractual "
-                    "reconocida por el derecho guatemalteco."
+                    "Un smart contract puede establecer obligaciones contractuales válidas, pero su "
+                    "enforcement depende del reconocimiento legal del contrato subyacente."
                 ),
                 correct=True,
-                keywords=["regalías", "smart contract", "autonomía de la voluntad", "exigibles"]
+                keywords=["obligaciones contractuales", "enforcement", "reconocimiento legal", "contrato subyacente"]
             ),
         ]
     ),
@@ -151,29 +164,29 @@ CASES: Dict[int, Case] = {
         case_id=3,
         title="Representación Digital vs Reproducción",
         description=(
-            "Una galería digital guatemalteca argumenta que al crear NFTs de obras de arte "
-            "contemporáneo, no está 'reproduciendo' las obras sino simplemente "
-            "'representándolas digitalmente'. Sostienen que la representación digital "
-            "en blockchain no constituye una fijación en el sentido del derecho de autor, "
-            "por lo que no requieren autorización del titular de derechos."
+            "Carlos posee los derechos de autor de una fotografía. Un tercero crea un NFT de su fotografía sin "
+            "autorización y la vende en una plataforma descentralizada. El NFT contiene un hash que apunta a "
+            "la imagen almacenada en IPFS. Carlos argumenta que esto constituye reproducción no autorizada y "
+            "violación a sus derechos de autor. La defensa del infractor alega que el NFT solo contiene "
+            "metadatos y un enlace, no la obra en sí."
         ),
         questions=[
             Question(
                 text=(
-                    "La representación digital de una obra protegida en un NFT constituye "
-                    "una reproducción que requiere autorización del titular según el "
-                    "derecho guatemalteco."
+                    "Crear un NFT que apunta a una obra protegida por derecho de autor, sin autorización "
+                    "del titular, constituye siempre una violación al derecho de reproducción."
                 ),
-                correct=True,
-                keywords=["representación digital", "reproducción", "autorización", "art. 9 LPI"]
+                correct=False,
+                keywords=["NFT", "reproducción", "autorización", "metadatos", "enlace"]
             ),
             Question(
                 text=(
-                    "La fijación digital en blockchain no puede considerarse reproducción "
-                    "porque no implica una copia física tangible de la obra original."
+                    "La mera tokenización de una obra (crear NFT con metadatos) sin almacenar la obra "
+                    "en blockchain podría no constituir reproducción directa, pero sí otros tipos de "
+                    "infracción como aprovechamiento indebido."
                 ),
-                correct=False,
-                keywords=["representación digital", "reproducción", "autorización", "fijación digital"]
+                correct=True,
+                keywords=["tokenización", "metadatos", "reproducción directa", "aprovechamiento indebido"]
             ),
         ]
     ),
@@ -181,27 +194,28 @@ CASES: Dict[int, Case] = {
         case_id=4,
         title="Uso Público de NFT Musical",
         description=(
-            "Un empresario guatemalteco adquiere un NFT de una canción de un artista local "
-            "y lo utiliza como pista de ambientación en conciertos públicos remunerados. "
-            "El empresario sostiene que la compra del NFT ya le otorga automáticamente "
-            "el derecho de comunicación pública de la obra musical."
+            "Una discográfica vende NFTs de canciones populares otorgando a los compradores derechos de "
+            "'uso público' para las canciones. Los compradores interpretan esto como autorización para usar "
+            "las canciones en streams de Twitch, videos de YouTube, eventos privados y comerciales públicos. "
+            "Surge controversia cuando artistas reclaman que estos usos exceden lo autorizado y constituyen "
+            "comunicación pública no autorizada."
         ),
         questions=[
             Question(
                 text=(
-                    "La compra de un NFT de una obra musical incluye implícitamente la licencia "
-                    "de comunicación pública según el derecho guatemalteco."
+                    "La comunicación pública de una obra musical requiere autorización específica del "
+                    "titular, independientemente de si se posee un NFT de la misma."
                 ),
-                correct=False,
-                keywords=["comunicación pública", "licencia implícita", "art. 16 LPI", "art. 17 LPI"]
+                correct=True,
+                keywords=["comunicación pública", "autorización específica", "obra musical", "NFT"]
             ),
             Question(
                 text=(
-                    "Los derechos de comunicación pública son independientes de la propiedad "
-                    "del NFT y requieren licencia expresa del titular de derechos patrimoniales."
+                    "Los términos 'uso público' en un contrato de NFT tienen un significado jurídico "
+                    "preciso que automáticamente autoriza cualquier tipo de comunicación pública."
                 ),
-                correct=True,
-                keywords=["comunicación pública", "licencia expresa", "derechos patrimoniales", "independencia"]
+                correct=False,
+                keywords=["uso público", "significado jurídico", "comunicación pública", "autorización automática"]
             ),
         ]
     ),
@@ -209,18 +223,18 @@ CASES: Dict[int, Case] = {
         case_id=5,
         title="NFT y Derechos Constitucionales",
         description=(
-            "Un programador guatemalteco crea y vende NFTs con poemas de autores nacionales "
-            "fallecidos hace menos de 50 años, comercializando las obras en plataformas "
-            "internacionales. Sostiene que lo hace amparado en el derecho constitucional "
-            "de acceso a la cultura (art. 71 CN) y que está promoviendo el patrimonio "
-            "cultural guatemalteco."
+            "Un museo nacional digitaliza obras de arte de dominio público y crea NFTs de las mismas, "
+            "vendiendo acceso exclusivo a versiones de alta resolución. Ciudadanos argumentan que esto "
+            "limita el acceso público a patrimonio cultural que debería ser libremente disponible, "
+            "violando el derecho constitucional de acceso a la cultura (Art. 71 CN). El museo alega que "
+            "las obras físicas siguen siendo accesibles y los NFTs solo monetizan versiones digitales "
+            "mejoradas."
         ),
         questions=[
             Question(
                 text=(
-                    "La venta de NFTs de obras literarias protegidas puede justificarse bajo "
-                    "el derecho constitucional de acceso a la cultura, prevaleciendo sobre "
-                    "los derechos patrimoniales de los herederos."
+                    "Los derechos de acceso a la cultura prevalecen sobre cualquier intento de "
+                    "monetización de obras en dominio público, incluso en versiones digitales mejoradas."
                 ),
                 correct=False,
                 keywords=["acceso a la cultura", "art. 71 CN", "derechos patrimoniales", "herederos", "art. 42 CN"]
@@ -262,6 +276,8 @@ def close_connection(exception: Optional[BaseException]) -> None:
 def ensure_schema(db: sqlite3.Connection) -> None:
     """Create the necessary tables if they do not already exist."""
     cursor = db.cursor()
+    
+    # Tabla principal results
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS results (
@@ -278,10 +294,13 @@ def ensure_schema(db: sqlite3.Connection) -> None:
             duration_seconds INTEGER,
             paste_attempts INTEGER DEFAULT 0,
             copy_attempts INTEGER DEFAULT 0,
-            total_penalties REAL DEFAULT 0
+            total_penalties REAL DEFAULT 0,
+            overall_level TEXT DEFAULT 'intermedio',
+            general_feedback TEXT
         );
         """
     )
+    
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS events (
@@ -295,18 +314,95 @@ def ensure_schema(db: sqlite3.Connection) -> None:
         """
     )
     
-    # Add new columns if they don't exist (migration)
+    # NUEVA TABLA: Evaluaciones detalladas por pregunta
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS question_evaluations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            result_id INTEGER NOT NULL,
+            case_id INTEGER NOT NULL,
+            question_index INTEGER NOT NULL,
+            user_answer_text TEXT,
+            user_answer_bool INTEGER,
+            correct_answer_bool INTEGER,
+            
+            -- 9 Criterios (escala 1-5)
+            opinion_fundada INTEGER DEFAULT 3,
+            valores_eticos INTEGER DEFAULT 3,
+            lenguaje_terminologia INTEGER DEFAULT 3,
+            citas_precision INTEGER DEFAULT 3,
+            estructura_coherencia INTEGER DEFAULT 3,
+            profundidad_fundamentacion INTEGER DEFAULT 3,
+            capacidad_critica INTEGER DEFAULT 3,
+            presentacion_estilo INTEGER DEFAULT 3,
+            innovacion_creatividad INTEGER DEFAULT 3,
+            
+            -- Feedback detallado
+            feedback_general TEXT,
+            feedback_fortalezas TEXT,
+            feedback_mejoras TEXT,
+            
+            -- Puntajes
+            truth_score REAL DEFAULT 0,
+            argument_score REAL DEFAULT 0,
+            final_score REAL DEFAULT 0,
+            
+            -- Metadatos IA
+            ai_model_used TEXT DEFAULT 'claude-3-sonnet-20240229',
+            ai_tokens_used INTEGER DEFAULT 0,
+            ai_processing_time_ms INTEGER DEFAULT 0,
+            ai_raw_response TEXT,
+            
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            
+            FOREIGN KEY (result_id) REFERENCES results(id)
+        );
+        """
+    )
+    
+    # NUEVA TABLA: Tokens de acceso para estudiantes
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS student_access_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            result_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            expires_at TEXT,
+            access_count INTEGER DEFAULT 0,
+            last_accessed TEXT,
+            
+            FOREIGN KEY (result_id) REFERENCES results(id)
+        );
+        """
+    )
+    
+    # Migrar columnas existentes de forma segura
+    existing_columns = []
     try:
-        cursor.execute("ALTER TABLE results ADD COLUMN student_hash TEXT")
-        cursor.execute("ALTER TABLE results ADD COLUMN start_time TEXT")
-        cursor.execute("ALTER TABLE results ADD COLUMN end_time TEXT")
-        cursor.execute("ALTER TABLE results ADD COLUMN duration_seconds INTEGER")
-        cursor.execute("ALTER TABLE results ADD COLUMN paste_attempts INTEGER DEFAULT 0")
-        cursor.execute("ALTER TABLE results ADD COLUMN copy_attempts INTEGER DEFAULT 0")
-        cursor.execute("ALTER TABLE results ADD COLUMN total_penalties REAL DEFAULT 0")
-    except sqlite3.OperationalError:
-        # Columns already exist
+        cursor.execute("PRAGMA table_info(results)")
+        existing_columns = [row[1] for row in cursor.fetchall()]
+    except:
         pass
+    
+    migrations = [
+        ('student_hash', 'ALTER TABLE results ADD COLUMN student_hash TEXT'),
+        ('start_time', 'ALTER TABLE results ADD COLUMN start_time TEXT'),
+        ('end_time', 'ALTER TABLE results ADD COLUMN end_time TEXT'),
+        ('duration_seconds', 'ALTER TABLE results ADD COLUMN duration_seconds INTEGER'),
+        ('paste_attempts', 'ALTER TABLE results ADD COLUMN paste_attempts INTEGER DEFAULT 0'),
+        ('copy_attempts', 'ALTER TABLE results ADD COLUMN copy_attempts INTEGER DEFAULT 0'),
+        ('total_penalties', 'ALTER TABLE results ADD COLUMN total_penalties REAL DEFAULT 0'),
+        ('overall_level', 'ALTER TABLE results ADD COLUMN overall_level TEXT DEFAULT \'intermedio\''),
+        ('general_feedback', 'ALTER TABLE results ADD COLUMN general_feedback TEXT'),
+    ]
+    
+    for column_name, sql in migrations:
+        if column_name not in existing_columns:
+            try:
+                cursor.execute(sql)
+            except sqlite3.OperationalError:
+                pass
     
     db.commit()
 
@@ -360,8 +456,50 @@ def detect_paste_copy_attempts(user_reason: str) -> Tuple[int, int]:
     
     return paste_indicators, copy_indicators
 
+def generate_student_access_token() -> str:
+    """Generar token único para acceso del estudiante a sus resultados."""
+    return secrets.token_urlsafe(32)
+
+def generate_general_feedback(evaluations: List[Dict], level: str) -> str:
+    """Generar feedback general basado en todas las evaluaciones."""
+    
+    # Calcular promedios por criterio
+    criterios = ['opinion_fundada', 'valores_eticos', 'lenguaje_terminologia', 'citas_precision',
+                'estructura_coherencia', 'profundidad_fundamentacion', 'capacidad_critica',
+                'presentacion_estilo', 'innovacion_creatividad']
+    
+    promedios = {}
+    for criterio in criterios:
+        scores = [eval_data.get(criterio, 3) for eval_data in evaluations]
+        promedios[criterio] = sum(scores) / len(scores) if scores else 3
+    
+    # Identificar fortalezas y debilidades
+    fortalezas = sorted(promedios.items(), key=lambda x: x[1], reverse=True)[:3]
+    debilidades = sorted(promedios.items(), key=lambda x: x[1])[:3]
+    
+    feedback_lines = []
+    
+    if level == 'avanzado':
+        feedback_lines.append("🎓 **Nivel Avanzado Detectado** - Excelente dominio del tema.")
+    elif level == 'basico':
+        feedback_lines.append("📚 **Nivel Básico Detectado** - Fundamentos sólidos, continúe estudiando.")
+    else:
+        feedback_lines.append("📖 **Nivel Intermedio Detectado** - Buen entendimiento general.")
+    
+    feedback_lines.append(f"\n**Principales fortalezas:**")
+    for criterio, score in fortalezas:
+        criterio_nombre = criterio.replace('_', ' ').title()
+        feedback_lines.append(f"• {criterio_nombre}: {score:.1f}/5.0")
+    
+    feedback_lines.append(f"\n**Áreas de mejora:**")
+    for criterio, score in debilidades:
+        criterio_nombre = criterio.replace('_', ' ').title()
+        feedback_lines.append(f"• {criterio_nombre}: {score:.1f}/5.0")
+    
+    return "\n".join(feedback_lines)
+
 ###############################################################################
-# AI Integration Functions
+# AI Integration Functions - REAL CLAUDE EVALUATION
 ###############################################################################
 
 def call_claude(prompt: str) -> Optional[str]:
@@ -397,392 +535,357 @@ def call_claude(prompt: str) -> Optional[str]:
     
     return None
 
-def evaluate_answer_with_ai(user_bool: bool, user_reason: str, correct_bool: bool, 
-                           case_description: str, question_text: str) -> Tuple[float, Dict]:
-    """Evaluate an answer using AI with detailed 9-criteria rubric. Max 3 points per question (6 per case, 30 total)."""
+def evaluate_answer_with_ai_real(user_bool: bool, user_reason: str, correct_bool: bool, 
+                                case_description: str, question_text: str, 
+                                case_id: int, question_index: int) -> Tuple[float, Dict]:
+    """
+    Evaluación REAL con Claude API usando rúbrica de 9 criterios.
+    Retorna: (score_final, diccionario_completo)
+    """
+    start_time = time.time()
     
-    # Truth component (1.5 points)
+    # Componente de verdad (1.5 puntos)
     truth_score = 1.5 if user_bool == correct_bool else 0.0
     
-    # AI evaluation of argument (1.5 points max)
-    argument_score = 1.5
-    ai_analysis = {}
-    feedback = ""
-    
-    # Detect copy/paste attempts
-    paste_attempts, copy_attempts = detect_paste_copy_attempts(user_reason)
-    paste_penalty = paste_attempts * 0.25 + copy_attempts * 0.5  # Up to 0.75 penalty
-    
-    if CLAUDE_API_KEY:
-        try:
-            evaluation_prompt = f"""
-            SISTEMA DE EVALUACIÓN LEGAL - RÚBRICA ESPECÍFICA NFT Y PROPIEDAD INTELECTUAL
-
-            CONTEXTO DEL CASO: {case_description}
-            PREGUNTA EVALUADA: {question_text}
-            RESPUESTA DEL ESTUDIANTE: {user_reason}
-
-            Evalúa esta respuesta usando la siguiente rúbrica específica (escala 1-5 para cada criterio):
-
-            1. OPINIÓN PROPIA FUNDADA (1-5):
-            1=No presenta opinión o es infundada
-            2=Opinión superficial, sin respaldo normativo/doctrinal
-            3=Opinión con algún respaldo, pero limitado o irrelevante
-            4=Opinión clara y fundamentada en norma, doctrina o jurisprudencia pertinente
-            5=Opinión sólida, argumentada y respaldada con múltiples fuentes relevantes y actuales
-
-            2. VALORES ÉTICOS (1-5):
-            1=Ignora totalmente los aspectos éticos del caso
-            2=Menciona valores de forma tangencial o confusa
-            3=Reconoce valores éticos básicos, sin análisis profundo
-            4=Analiza valores éticos pertinentes y su relación con el caso
-            5=Analiza de forma crítica, equilibrada y profunda los valores éticos, vinculándolos con principios jurídicos y derechos humanos
-
-            3. LENGUAJE Y TERMINOLOGÍA (1-5):
-            1=Uso incorrecto de terminología, lenguaje coloquial inapropiado
-            2=Uso parcial de términos técnicos, con errores
-            3=Lenguaje adecuado pero poco preciso; mezcla términos técnicos y coloquiales
-            4=Lenguaje técnico-jurídico claro y correcto, con terminología adecuada
-            5=Lenguaje jurídico-forense preciso, adaptado al contexto y al público, sin errores
-
-            4. CITAS Y PRECISIÓN NORMATIVA (1-5):
-            1=No cita norma alguna o las cita erróneamente
-            2=Citas incompletas o imprecisas
-            3=Citas correctas pero sin exactitud plena
-            4=Cita correctamente artículos, leyes, tratados o sentencias pertinentes
-            5=Cita exacta y puntual (artículo, inciso, nombre completo de ley o tratado), integrando jurisprudencia y doctrina de forma impecable
-
-            5. ESTRUCTURA Y COHERENCIA (1-5):
-            1=Argumento desorganizado, incoherente o contradictorio
-            2=Estructura débil, con saltos lógicos
-            3=Organización aceptable, con transiciones poco claras
-            4=Estructura lógica, coherente y bien organizada
-            5=Argumentación impecablemente estructurada, con transiciones fluidas y progresión lógica sólida
-
-            6. PROFUNDIDAD Y PERTINENCIA DE LA FUNDAMENTACIÓN (1-5):
-            1=Fundamentación ausente o irrelevante
-            2=Fundamentación parcial, con fuentes poco pertinentes
-            3=Fundamentación aceptable, aunque limitada en alcance o actualidad
-            4=Fundamentación sólida y pertinente con fuentes relevantes y actuales
-            5=Fundamentación exhaustiva, con doctrina, jurisprudencia y normas actualizadas y aplicables
-
-            7. CAPACIDAD CRÍTICA (1-5):
-            1=No hay análisis crítico ni contraste de fuentes
-            2=Contrasta superficialmente una sola fuente
-            3=Identifica algunas diferencias entre fuentes, sin profundizar
-            4=Contrasta y analiza diferencias con sentido crítico
-            5=Contrasta de manera profunda, identifica vacíos, ambigüedades y propone soluciones jurídicas innovadoras
-
-            8. PRESENTACIÓN Y ESTILO (1-5):
-            1=Redacción confusa, con errores graves
-            2=Redacción aceptable pero con errores frecuentes
-            3=Redacción clara pero con errores menores
-            4=Redacción clara, sin errores significativos
-            5=Redacción impecable, sin errores, con formato y estilo de citas uniforme y profesional
-
-            9. INNOVACIÓN Y CREATIVIDAD ARGUMENTATIVA (1-5):
-            1=Argumentación repetitiva, sin originalidad
-            2=Ideas poco desarrolladas o irrelevantes
-            3=Alguna idea novedosa pero sin desarrollo
-            4=Soluciones o enfoques novedosos y bien fundamentados
-            5=Soluciones creativas, interdisciplinarias y viables, respaldadas sólidamente
-
-            INSTRUCCIONES DE RESPUESTA:
-            - Evalúa cada criterio del 1 al 5
-            - Calcula el promedio de los 9 criterios
-            - El score final será: (promedio/5) * 1.5 para obtener máximo 1.5 puntos
-            - Proporciona feedback específico y constructivo
-
-            Responde ÚNICAMENTE en formato JSON válido:
-            {{
-                "criterios": {{
-                    "opinion_fundada": X,
-                    "valores_eticos": X,
-                    "lenguaje_terminologia": X,
-                    "citas_precision": X,
-                    "estructura_coherencia": X,
-                    "profundidad_fundamentacion": X,
-                    "capacidad_critica": X,
-                    "presentacion_estilo": X,
-                    "innovacion_creatividad": X
-                }},
-                "promedio_criterios": X.X,
-                "score": X.X,
-                "feedback": "Análisis específico y constructivo de la respuesta, destacando fortalezas y áreas de mejora..."
-            }}
-            """
-            
-            response = requests.post(
-                'https://api.anthropic.com/v1/messages',
-                headers={
-                    'Content-Type': 'application/json',
-                    'x-api-key': CLAUDE_API_KEY,
-                    'anthropic-version': '2023-06-01'
-                },
-                json={
-                    'model': 'claude-3-sonnet-20240229',
-                    'max_tokens': 2000,
-                    'messages': [{'role': 'user', 'content': evaluation_prompt}]
-                },
-                timeout=20
-            )
-            
-            if response.status_code == 200:
-                ai_response = response.json()['content'][0]['text']
-                logger.info(f"AI Response: {ai_response}")
-                
-                try:
-                    # Extract JSON from response
-                    import re
-                    json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
-                    if json_match:
-                        ai_result = json.loads(json_match.group())
-                        
-                        # Extract detailed criteria
-                        criterios = ai_result.get('criterios', {})
-                        ai_analysis = {
-                            'opinion_fundada': criterios.get('opinion_fundada', 3),
-                            'valores_eticos': criterios.get('valores_eticos', 3),
-                            'lenguaje_terminologia': criterios.get('lenguaje_terminologia', 3),
-                            'citas_precision': criterios.get('citas_precision', 3),
-                            'estructura_coherencia': criterios.get('estructura_coherencia', 3),
-                            'profundidad_fundamentacion': criterios.get('profundidad_fundamentacion', 3),
-                            'capacidad_critica': criterios.get('capacidad_critica', 3),
-                            'presentacion_estilo': criterios.get('presentacion_estilo', 3),
-                            'innovacion_creatividad': criterios.get('innovacion_creatividad', 3),
-                            'promedio_criterios': ai_result.get('promedio_criterios', 3.0)
-                        }
-                        
-                        argument_score = min(1.5, max(0.0, ai_result.get('score', 0.75)))
-                        feedback = ai_result.get('feedback', 'Evaluación completada.')
-                        
-                        logger.info(f"AI Analysis successful: score={argument_score}, criteria={ai_analysis}")
-                        
-                except Exception as e:
-                    logger.error(f"Error parsing AI evaluation: {e}")
-                    # Default values if parsing fails
-                    argument_score = 0.75
-                    ai_analysis = {
-                        'opinion_fundada': 3,
-                        'valores_eticos': 3,
-                        'lenguaje_terminologia': 3,
-                        'citas_precision': 3,
-                        'estructura_coherencia': 3,
-                        'profundidad_fundamentacion': 3,
-                        'capacidad_critica': 3,
-                        'presentacion_estilo': 3,
-                        'innovacion_creatividad': 3,
-                        'promedio_criterios': 3.0
-                    }
-                    feedback = "Error en evaluación automática. Puntuación asignada por defecto."
-            else:
-                logger.error(f"AI API Error: {response.status_code}")
-                argument_score = 0.75
-                
-        except Exception as e:
-            logger.error(f"Error evaluating with AI: {e}")
-            argument_score = 0.75
-    else:
-        # Basic evaluation without AI
-        argument_score = 0.75 if len(user_reason.strip()) >= 50 else 0.25
-        ai_analysis = {
-            'opinion_fundada': 3,
-            'valores_eticos': 3,
-            'lenguaje_terminologia': 3,
-            'citas_precision': 3,
-            'estructura_coherencia': 3,
-            'profundidad_fundamentacion': 3,
-            'capacidad_critica': 3,
-            'presentacion_estilo': 3,
-            'innovacion_creatividad': 3,
-            'promedio_criterios': 3.0
-        }
-    
-    # Calculate total score (max 3 points per question)
-    total_score = truth_score + argument_score - paste_penalty
-    total_score = max(0.0, min(3.0, total_score))
-    
-    breakdown = {
-        'truth': truth_score,
-        'argument': argument_score,
-        'paste_penalty': paste_penalty,
-        'paste_attempts': paste_attempts,
-        'copy_attempts': copy_attempts,
-        'feedback': feedback,
-        'ai_analysis': ai_analysis
+    # Valores por defecto si falla la IA
+    default_result = {
+        'opinion_fundada': 3,
+        'valores_eticos': 3,
+        'lenguaje_terminologia': 3,
+        'citas_precision': 3,
+        'estructura_coherencia': 3,
+        'profundidad_fundamentacion': 3,
+        'capacidad_critica': 3,
+        'presentacion_estilo': 3,
+        'innovacion_creatividad': 3,
+        'feedback_general': 'Evaluación sin IA disponible. Puntuación por defecto asignada.',
+        'feedback_fortalezas': 'No se pudo analizar con IA.',
+        'feedback_mejoras': 'Configure Claude API key para evaluación detallada.',
+        'truth_score': truth_score,
+        'argument_score': 0.75,
+        'final_score': truth_score + 0.75,
+        'ai_tokens_used': 0,
+        'ai_processing_time_ms': 0,
+        'ai_model_used': 'none',
+        'ai_raw_response': '{"error": "No API key"}'
     }
     
-    return total_score, breakdown
+    if not CLAUDE_API_KEY:
+        logger.warning("Claude API key not configured")
+        return default_result['final_score'], default_result
+    
+    # Crear prompt específico para NFTs y Propiedad Intelectual
+    evaluation_prompt = f"""
+Eres un experto en Derecho de Propiedad Intelectual y tecnologías blockchain, especializado en NFTs. 
+
+CASO JURÍDICO: {case_description}
+
+PREGUNTA EVALUADA: {question_text}
+
+RESPUESTA DEL ESTUDIANTE: {user_reason}
+
+RESPUESTA CORRECTA: {"Verdadero" if correct_bool else "Falso"}
+RESPUESTA DEL ESTUDIANTE: {"Verdadero" if user_bool else "Falso"}
+
+EVALÚA esta respuesta usando exactamente estos 9 criterios (escala 1-5):
+
+1. OPINIÓN FUNDADA (1-5): ¿Presenta una opinión jurídica respaldada en doctrina, jurisprudencia o normativa?
+2. VALORES ÉTICOS (1-5): ¿Considera principios éticos del derecho de autor, acceso a la cultura, innovación?
+3. LENGUAJE JURÍDICO (1-5): ¿Usa terminología legal precisa y apropiada?
+4. CITAS Y PRECISIÓN (1-5): ¿Referencia normas, artículos o jurisprudencia relevante?
+5. ESTRUCTURA Y COHERENCIA (1-5): ¿La argumentación es lógica y bien organizada?
+6. PROFUNDIDAD (1-5): ¿Analiza las implicaciones jurídicas en profundidad?
+7. CAPACIDAD CRÍTICA (1-5): ¿Evalúa críticamente los aspectos controvertidos del tema?
+8. PRESENTACIÓN (1-5): ¿La redacción es clara y profesional?
+9. INNOVACIÓN (1-5): ¿Aporta perspectivas novedosas o soluciones creativas?
+
+ADEMÁS:
+- Identifica 2-3 FORTALEZAS específicas de la respuesta
+- Identifica 2-3 ÁREAS DE MEJORA específicas
+- Da FEEDBACK CONSTRUCTIVO general
+
+Responde SOLO en formato JSON válido:
+
+{{
+    "criterios": {{
+        "opinion_fundada": [1-5],
+        "valores_eticos": [1-5], 
+        "lenguaje_terminologia": [1-5],
+        "citas_precision": [1-5],
+        "estructura_coherencia": [1-5],
+        "profundidad_fundamentacion": [1-5],
+        "capacidad_critica": [1-5],
+        "presentacion_estilo": [1-5],
+        "innovacion_creatividad": [1-5]
+    }},
+    "feedback_general": "Análisis general constructivo y específico...",
+    "feedback_fortalezas": "1. Primera fortaleza específica. 2. Segunda fortaleza específica. 3. Tercera fortaleza específica.",
+    "feedback_mejoras": "1. Primera área de mejora específica. 2. Segunda área de mejora específica. 3. Tercera área de mejora específica.",
+    "promedio_criterios": 0.0,
+    "nivel_detectado": "basico|intermedio|avanzado"
+}}
+"""
+    
+    try:
+        # Llamada a Claude API
+        response = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': CLAUDE_API_KEY,
+                'anthropic-version': '2023-06-01'
+            },
+            json={
+                'model': 'claude-3-sonnet-20240229',
+                'max_tokens': 1200,
+                'messages': [{'role': 'user', 'content': evaluation_prompt}]
+            },
+            timeout=25
+        )
+        
+        processing_time = int((time.time() - start_time) * 1000)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            ai_response = response_data['content'][0]['text']
+            tokens_used = response_data.get('usage', {}).get('output_tokens', 0)
+            
+            logger.info(f"Claude API response received: {len(ai_response)} chars, {tokens_used} tokens")
+            
+            # Extraer JSON de la respuesta
+            try:
+                # Intentar parsear directamente
+                if ai_response.strip().startswith('{'):
+                    ai_result = json.loads(ai_response.strip())
+                else:
+                    # Buscar JSON dentro del texto
+                    json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_response, re.DOTALL)
+                    if json_match:
+                        ai_result = json.loads(json_match.group())
+                    else:
+                        raise ValueError("No JSON encontrado en respuesta")
+                
+                # Validar criterios
+                criterios = ai_result.get('criterios', {})
+                validated_criterios = {}
+                
+                for criterio in ['opinion_fundada', 'valores_eticos', 'lenguaje_terminologia',
+                               'citas_precision', 'estructura_coherencia', 'profundidad_fundamentacion',
+                               'capacidad_critica', 'presentacion_estilo', 'innovacion_creatividad']:
+                    score = criterios.get(criterio, 3)
+                    validated_criterios[criterio] = max(1, min(5, int(score))) if isinstance(score, (int, float)) else 3
+                
+                # Calcular promedio y puntaje de argumento
+                promedio = sum(validated_criterios.values()) / len(validated_criterios)
+                argument_score = (promedio / 5.0) * 1.5  # Escalar a 1.5 puntos máximo
+                final_score = truth_score + argument_score
+                
+                # Resultado completo
+                result = {
+                    **validated_criterios,
+                    'feedback_general': ai_result.get('feedback_general', 'Sin feedback general')[:2000],
+                    'feedback_fortalezas': ai_result.get('feedback_fortalezas', 'Sin fortalezas identificadas')[:1000],
+                    'feedback_mejoras': ai_result.get('feedback_mejoras', 'Sin mejoras sugeridas')[:1000],
+                    'truth_score': truth_score,
+                    'argument_score': argument_score,
+                    'final_score': final_score,
+                    'promedio_criterios': promedio,
+                    'nivel_detectado': ai_result.get('nivel_detectado', 'intermedio'),
+                    'ai_tokens_used': tokens_used,
+                    'ai_processing_time_ms': processing_time,
+                    'ai_model_used': 'claude-3-sonnet-20240229',
+                    'ai_raw_response': ai_response[:2000]  # Limitar tamaño
+                }
+                
+                logger.info(f"✅ Evaluación exitosa: {final_score:.2f}/3.0 (promedio criterios: {promedio:.2f})")
+                return final_score, result
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.error(f"Error parsing Claude response: {e}")
+                logger.error(f"Raw response: {ai_response[:500]}")
+                
+                # Fallback: extraer información básica
+                default_result.update({
+                    'ai_tokens_used': tokens_used,
+                    'ai_processing_time_ms': processing_time,
+                    'ai_raw_response': ai_response[:2000],
+                    'feedback_general': f'Error procesando respuesta de IA: {str(e)[:200]}'
+                })
+                
+        else:
+            error_msg = f"Claude API error {response.status_code}: {response.text[:200]}"
+            logger.error(error_msg)
+            default_result['feedback_general'] = f'Error de API: {error_msg}'
+            
+    except requests.exceptions.Timeout:
+        logger.error("Claude API timeout")
+        default_result['feedback_general'] = 'Timeout en evaluación con IA. Intente nuevamente.'
+        default_result['ai_processing_time_ms'] = int((time.time() - start_time) * 1000)
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in AI evaluation: {e}")
+        default_result['feedback_general'] = f'Error inesperado: {str(e)[:200]}'
+        default_result['ai_processing_time_ms'] = int((time.time() - start_time) * 1000)
+    
+    return default_result['final_score'], default_result
 
 ###############################################################################
-# Routes
+# Routes for students
 ###############################################################################
 
 @app.route('/')
-def index() -> str:
-    """Landing page."""
-    # Check if exam is blocked
+def student_form() -> str:
+    """Present the form for students to register for the exam."""
     if is_exam_blocked():
-        return render_template('exam_blocked.html', deadline=EXAM_DEADLINE)
+        return render_template('exam_blocked.html', deadline=EXAM_DEADLINE, 
+                             guatemala_time=get_guatemala_time())
     
-    return render_template('student_form.html', 
-                         exam_deadline=EXAM_DEADLINE,
+    return render_template('student_form.html', deadline=EXAM_DEADLINE,
                          guatemala_time=get_guatemala_time())
-
-@app.route('/rubric')
-def rubric() -> str:
-    """Show exam rubric and evaluation criteria."""
-    return render_template('rubric.html', cases=CASES)
 
 @app.route('/start_exam', methods=['POST'])
 def start_exam() -> str:
-    """Process student registration and start exam."""
+    """Process the student registration and start the exam."""
     if is_exam_blocked():
-        flash(f"El examen ha expirado. Fecha límite: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
-        return redirect(url_for('index'))
+        return render_template('exam_blocked.html', deadline=EXAM_DEADLINE,
+                             guatemala_time=get_guatemala_time())
     
     student_name = request.form.get('student_name', '').strip()
     student_carne = request.form.get('student_carne', '').strip()
     
     if not student_name or not student_carne:
-        flash("Debe completar todos los campos")
-        return redirect(url_for('index'))
+        flash('Por favor complete todos los campos requeridos.', 'error')
+        return redirect(url_for('student_form'))
     
     # Check for duplicate attempts
     student_hash = get_student_hash(student_name, student_carne)
     if has_student_attempted(student_hash):
-        flash("Ya has completado este examen. Solo se permite un intento por estudiante.")
-        return redirect(url_for('index'))
+        flash('Ya ha completado el examen anteriormente. Solo se permite un intento por estudiante.', 'error')
+        return redirect(url_for('student_form'))
     
-    # Store in session
+    # Store student data in session
     session['student_name'] = student_name
     session['student_carne'] = student_carne
     session['student_hash'] = student_hash
     session['exam_start_time'] = get_guatemala_time().isoformat()
     
-    return redirect(url_for('take_comprehensive_exam'))
+    return redirect(url_for('comprehensive_exam'))
 
 @app.route('/comprehensive_exam')
-def take_comprehensive_exam() -> str:
-    """Display comprehensive exam with all cases."""
+def comprehensive_exam() -> str:
+    """Present the comprehensive exam with all 5 cases."""
     if is_exam_blocked():
-        flash(f"El examen ha expirado. Fecha límite: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
-        return redirect(url_for('index'))
+        return render_template('exam_blocked.html', deadline=EXAM_DEADLINE,
+                             guatemala_time=get_guatemala_time())
     
-    if 'student_name' not in session or 'student_carne' not in session:
-        flash("Debe registrar sus datos primero")
-        return redirect(url_for('index'))
+    if 'student_name' not in session:
+        flash('Debe registrarse primero antes de tomar el examen.', 'error')
+        return redirect(url_for('student_form'))
     
-    # Check for duplicate attempts
-    student_hash = session.get('student_hash')
-    if has_student_attempted(student_hash):
-        flash("Ya has completado este examen. Solo se permite un intento por estudiante.")
-        session.clear()
-        return redirect(url_for('index'))
+    # Check for duplicate attempts again (in case of session manipulation)
+    if has_student_attempted(session.get('student_hash', '')):
+        flash('Ya ha completado el examen anteriormente.', 'error')
+        return redirect(url_for('student_form'))
     
-    # Prepare all cases with potentially paraphrased questions
-    all_cases_data = []
-    
-    for case_id, case in CASES.items():
-        case_questions = []
-        for question in case.questions:
-            # Try to get paraphrased question, fallback to original
-            paraphrased = call_claude(question.text)
-            final_question_text = paraphrased if paraphrased else question.get_text()
-            case_questions.append(final_question_text)
-        
-        all_cases_data.append({
-            'case': case,
-            'questions': case_questions
-        })
-    
-    return render_template(
-        'comprehensive_exam.html',
-        all_cases_data=all_cases_data,
-        student_name=session.get('student_name'),
-        student_carne=session.get('student_carne'),
-        exam_deadline=EXAM_DEADLINE
-    )
+    return render_template('comprehensive_exam.html', 
+                         cases=CASES, 
+                         student_name=session.get('student_name'),
+                         student_carne=session.get('student_carne'))
 
 @app.route('/submit_comprehensive', methods=['POST'])
 def submit_comprehensive() -> str:
-    """Process comprehensive exam submission."""
+    """Process the comprehensive exam submission with REAL AI evaluation."""
     if is_exam_blocked():
-        flash(f"El examen ha expirado durante su realización. Fecha límite: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
-        return redirect(url_for('index'))
+        return render_template('exam_blocked.html', deadline=EXAM_DEADLINE,
+                             guatemala_time=get_guatemala_time())
     
-    if 'student_name' not in session or 'student_carne' not in session:
-        flash("Sesión expirada. Debe registrarse nuevamente.")
-        return redirect(url_for('index'))
+    if 'student_name' not in session:
+        flash('Sesión expirada. Debe registrarse nuevamente.', 'error')
+        return redirect(url_for('student_form'))
     
-    # Check for duplicate attempts
-    student_hash = session.get('student_hash')
-    if has_student_attempted(student_hash):
-        flash("Ya has completado este examen. Solo se permite un intento por estudiante.")
-        session.clear()
-        return redirect(url_for('index'))
-    
-    # Calculate timing
-    end_time = get_guatemala_time()
-    start_time_str = session.get('exam_start_time')
-    if start_time_str:
-        start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
-        if start_time.tzinfo is None:
-            start_time = start_time.replace(tzinfo=GUATEMALA_TZ)
-        duration_seconds = int((end_time - start_time).total_seconds())
-    else:
-        start_time = end_time
-        duration_seconds = 0
-    
-    timestamp = end_time.isoformat()
     student_name = session.get('student_name')
     student_carne = session.get('student_carne')
-    student_id = f"{student_carne} - {student_name}"
+    student_hash = session.get('student_hash')
+    start_time_iso = session.get('exam_start_time')
     
-    # Process all cases
-    all_answers = []
+    if not all([student_name, student_carne, student_hash, start_time_iso]):
+        flash('Datos de sesión incompletos. Reinicie el examen.', 'error')
+        return redirect(url_for('student_form'))
+    
+    # Check for duplicate submission
+    if has_student_attempted(student_hash):
+        flash('Ya ha completado el examen anteriormente.', 'error')
+        return redirect(url_for('student_form'))
+    
+    # Calculate timing
+    start_time = datetime.fromisoformat(start_time_iso)
+    end_time = get_guatemala_time()
+    duration_seconds = int((end_time - start_time).total_seconds())
+    timestamp = end_time.isoformat()
+    
+    # Extract form data
+    student_id = f"{student_name} ({student_carne})"
     total_score = 0.0
     total_paste_attempts = 0
     total_copy_attempts = 0
     total_penalties = 0.0
     
-    for case_id, case in CASES.items():
+    all_answers = []
+    all_question_evaluations = []
+    
+    logger.info(f"🚀 Iniciando evaluación con IA para {student_name}")
+    
+    # Process each case
+    for case_id in CASES:
+        case = CASES[case_id]
         case_answers = []
-        case_score = 0.0
+        case_score = 0
         
-        for q_index, question in enumerate(case.questions):
-            bool_key = f"q_{case_id}_{q_index}_bool"
-            reason_key = f"q_{case_id}_{q_index}_reason"
+        for i in range(len(case.questions)):
+            question_key = f"case_{case_id}_q{i}"
+            answer_key = f"case_{case_id}_a{i}"
             
-            user_bool_str = request.form.get(bool_key, '').strip()
-            user_reason = request.form.get(reason_key, '').strip()
+            user_bool = request.form.get(question_key) == 'true'
+            user_reason = request.form.get(answer_key, '').strip()
+            correct_bool = case.questions[i].correct
             
-            if not user_bool_str or not user_reason:
-                flash(f"Pregunta incompleta en Caso {case_id}")
-                return redirect(url_for('take_comprehensive_exam'))
+            if not user_reason:
+                user_reason = "Sin justificación proporcionada."
             
-            user_bool = user_bool_str == 'True'
-            
-            # Evaluate answer
-            question_score, breakdown = evaluate_answer_with_ai(
-                user_bool, user_reason, question.correct, case.description, question.text
+            # EVALUACIÓN REAL CON CLAUDE API
+            logger.info(f"🤖 Evaluando Caso {case_id}, Pregunta {i+1} con Claude...")
+            question_score, evaluation_data = evaluate_answer_with_ai_real(
+                user_bool, user_reason, correct_bool,
+                case.description, case.questions[i].text,
+                case_id, i
             )
             
-            # Accumulate penalties
-            total_paste_attempts += breakdown.get('paste_attempts', 0)
-            total_copy_attempts += breakdown.get('copy_attempts', 0)
-            total_penalties += breakdown.get('paste_penalty', 0)
+            # Agregar datos de la pregunta a la evaluación
+            evaluation_data.update({
+                'case_id': case_id,
+                'question_index': i,
+                'user_answer_text': user_reason,
+                'user_answer_bool': 1 if user_bool else 0,
+                'correct_answer_bool': 1 if correct_bool else 0
+            })
+            
+            all_question_evaluations.append(evaluation_data)
             
             case_answers.append({
-                'question_text': question.text,
                 'user_bool': user_bool,
                 'user_reason': user_reason,
-                'correct_bool': question.correct,
+                'correct': correct_bool,
                 'score': question_score,
-                'breakdown': breakdown
+                'ai_feedback': {
+                    'general': evaluation_data.get('feedback_general', ''),
+                    'fortalezas': evaluation_data.get('feedback_fortalezas', ''),
+                    'mejoras': evaluation_data.get('feedback_mejoras', '')
+                }
             })
             
             case_score += question_score
+            
+            logger.info(f"✅ Pregunta {i+1} Caso {case_id}: {question_score:.2f}/3.0")
         
         all_answers.append({
             'case': case,
@@ -792,21 +895,38 @@ def submit_comprehensive() -> str:
         
         total_score += case_score
     
-    # Store in database
+    # Calcular nivel general del estudiante
+    avg_score_per_question = total_score / 10  # 10 preguntas total
+    overall_level = 'basico' if avg_score_per_question < 1.8 else ('avanzado' if avg_score_per_question >= 2.4 else 'intermedio')
+    
+    # Generar feedback general
+    general_feedback = generate_general_feedback(all_question_evaluations, overall_level)
+    
+    logger.info(f"📊 Evaluación completa: {total_score:.1f}/30.0 - Nivel: {overall_level}")
+    
+    # Guardar en base de datos
     db = get_db()
     cur = db.cursor()
     
+    # Guardar resultado principal
     answers_json = json.dumps({
         'student_name': student_name,
         'student_carne': student_carne,
         'all_cases': {str(case_data['case'].case_id): {
-            'answers': case_data['answers'],
+            'answers': [{
+                'user_bool': ans['user_bool'],
+                'user_reason': ans['user_reason'],
+                'correct': ans['correct'],
+                'score': ans['score']
+            } for ans in case_data['answers']],
             'score': case_data['score']
         } for case_data in all_answers}
     })
     
     rubric_json = json.dumps({
         'total_score': total_score,
+        'overall_level': overall_level,
+        'general_feedback': general_feedback,
         'total_penalties': total_penalties,
         'paste_attempts': total_paste_attempts,
         'copy_attempts': total_copy_attempts,
@@ -817,25 +937,59 @@ def submit_comprehensive() -> str:
         """
         INSERT INTO results 
         (timestamp, student_id, student_hash, case_id, answers_json, score, rubric_json, 
-         start_time, end_time, duration_seconds, paste_attempts, copy_attempts, total_penalties) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         start_time, end_time, duration_seconds, paste_attempts, copy_attempts, total_penalties,
+         overall_level, general_feedback) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (timestamp, student_id, student_hash, 0, answers_json, total_score, rubric_json,
          start_time.isoformat(), end_time.isoformat(), duration_seconds,
-         total_paste_attempts, total_copy_attempts, total_penalties)
+         total_paste_attempts, total_copy_attempts, total_penalties, overall_level, general_feedback)
     )
     result_id = cur.lastrowid
+    
+    # Guardar evaluaciones detalladas de cada pregunta
+    for eval_data in all_question_evaluations:
+        cur.execute(
+            """
+            INSERT INTO question_evaluations 
+            (result_id, case_id, question_index, user_answer_text, user_answer_bool, correct_answer_bool,
+             opinion_fundada, valores_eticos, lenguaje_terminologia, citas_precision, estructura_coherencia,
+             profundidad_fundamentacion, capacidad_critica, presentacion_estilo, innovacion_creatividad,
+             feedback_general, feedback_fortalezas, feedback_mejoras, truth_score, argument_score, final_score,
+             ai_model_used, ai_tokens_used, ai_processing_time_ms, ai_raw_response)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (result_id, eval_data['case_id'], eval_data['question_index'], 
+             eval_data['user_answer_text'], eval_data['user_answer_bool'], eval_data['correct_answer_bool'],
+             eval_data['opinion_fundada'], eval_data['valores_eticos'], eval_data['lenguaje_terminologia'],
+             eval_data['citas_precision'], eval_data['estructura_coherencia'], eval_data['profundidad_fundamentacion'],
+             eval_data['capacidad_critica'], eval_data['presentacion_estilo'], eval_data['innovacion_creatividad'],
+             eval_data['feedback_general'], eval_data['feedback_fortalezas'], eval_data['feedback_mejoras'],
+             eval_data['truth_score'], eval_data['argument_score'], eval_data['final_score'],
+             eval_data['ai_model_used'], eval_data['ai_tokens_used'], eval_data['ai_processing_time_ms'],
+             eval_data['ai_raw_response'])
+        )
+    
+    # Generar token de acceso para el estudiante
+    access_token = generate_student_access_token()
+    cur.execute(
+        "INSERT INTO student_access_tokens (result_id, token) VALUES (?, ?)",
+        (result_id, access_token)
+    )
     
     # Log completion event
     cur.execute(
         "INSERT INTO events (result_id, event_type, event_time, details) VALUES (?, ?, ?, ?)",
-        (result_id, 'exam_completed', timestamp, f"Duration: {duration_seconds}s, Penalties: {total_penalties:.2f}")
+        (result_id, 'exam_completed', timestamp, 
+         f"Duration: {duration_seconds}s, Penalties: {total_penalties:.2f}, Level: {overall_level}")
     )
     
     db.commit()
     
     # Clear session data
     session.clear()
+    
+    logger.info(f"💾 Resultados guardados para {student_name} - Token: {access_token[:8]}...")
     
     return render_template(
         'comprehensive_feedback.html',
@@ -848,8 +1002,23 @@ def submit_comprehensive() -> str:
         duration_minutes=duration_seconds // 60,
         student_name=student_name,
         student_carne=student_carne,
+        general_feedback=general_feedback,
+        overall_level=overall_level,
+        result_id=result_id,
+        access_token=access_token,
+        detailed_evaluations=all_question_evaluations,
         max_score=30.0
     )
+
+@app.route('/rubric')
+def rubric() -> str:
+    """Display the evaluation rubric."""
+    return render_template('rubric.html')
+
+@app.route('/info')
+def info() -> str:
+    """Display system information."""
+    return render_template('info.html')
 
 ###############################################################################
 # Routes for instructors
@@ -857,7 +1026,7 @@ def submit_comprehensive() -> str:
 
 @app.route('/login', methods=['GET', 'POST'])
 def login() -> str:
-    """Login page for instructors. Updated password: 'organismojudicial'"""
+    """Login page for instructors."""
     if request.method == 'POST':
         if request.form.get('password') == INSTRUCTOR_PASSWORD:
             session['instructor'] = True
@@ -883,7 +1052,7 @@ def dashboard() -> str:
     cur = db.cursor()
     cur.execute(
         """SELECT id, timestamp, student_id, case_id, score, duration_seconds, 
-                  paste_attempts, copy_attempts, total_penalties 
+                  paste_attempts, copy_attempts, total_penalties, overall_level 
            FROM results ORDER BY timestamp DESC"""
     )
     rows = cur.fetchall()
@@ -921,6 +1090,15 @@ def view_result(result_id: int) -> str:
     if not result:
         return "Resultado no encontrado", 404
     
+    # Get detailed evaluations
+    cur.execute("""
+        SELECT * FROM question_evaluations 
+        WHERE result_id = ?
+        ORDER BY case_id, question_index
+    """, (result_id,))
+    
+    detailed_evaluations = cur.fetchall()
+    
     try:
         answers_data = json.loads(result['answers_json'])
         rubric_data = json.loads(result['rubric_json'])
@@ -938,110 +1116,147 @@ def view_result(result_id: int) -> str:
             )
             events = cur.fetchall()
             
-            # CORRECCIÓN: Preparar datos para el template de instructor
-            processed_cases_data = []
-            for case_id_str, case_data in all_cases_answers.items():
-                case_id = int(case_id_str)
-                case_obj = CASES.get(case_id)
-                if case_obj:
-                    processed_cases_data.append({
-                        'case': case_obj,
-                        'answers': case_data.get('answers', []),
-                        'score': case_data.get('score', 0)
-                    })
-            
-            return render_template(
-                'instructor_comprehensive_result.html',  # Template específico para instructor
-                all_cases_data=processed_cases_data,
-                cases=CASES,
-                total_score=result['score'],
-                events=events,
-                student_name=student_name,
-                student_carne=student_carne,
-                rubric_data=rubric_data,
-                result=result,
-                max_score=30.0
-            )
+            return render_template('instructor_comprehensive_result.html',
+                                 result=result,
+                                 student_name=student_name,
+                                 student_carne=student_carne,
+                                 all_cases_answers=all_cases_answers,
+                                 cases=CASES,
+                                 rubric_data=rubric_data,
+                                 events=events,
+                                 detailed_evaluations=detailed_evaluations)
         else:
-            # Individual exam (legacy)
-            return render_template(
-                'result.html',
-                result=result,
-                cases=CASES,
-                answers=json.loads(result['answers_json']),
-                events=[],
-                max_score=30.0
-            )
+            # Single case exam (legacy)
+            return render_template('result.html', 
+                                 result=result, 
+                                 case=CASES.get(result['case_id']),
+                                 events=events,
+                                 detailed_evaluations=detailed_evaluations)
+                                 
+    except json.JSONDecodeError:
+        return "Error: Datos de resultado corruptos", 500
+
+###############################################################################
+# API Routes
+###############################################################################
+
+@app.route('/api/evaluation-details/<int:result_id>')
+@require_instructor
+def get_evaluation_details(result_id: int):
+    """API endpoint para obtener detalles de evaluación por pregunta."""
+    db = get_db()
+    cur = db.cursor()
     
-    except Exception as e:
-        logger.error(f"Error processing result {result_id}: {e}")
-        return f"Error procesando resultado: {str(e)}", 500
-
-@app.route('/info')
-def info():
-    """Página de información del sistema."""
-    return render_template('info.html', cases=CASES, exam_deadline=EXAM_DEADLINE)
-
-###############################################################################
-# Utility Functions and Filters
-###############################################################################
-
-def from_json_filter(json_string):
-    """Filtro para convertir JSON string a dict en templates"""
-    try:
-        return json.loads(json_string) if json_string else {}
-    except:
-        return {}
-
-# Register filters
-
-
-@app.context_processor
-def inject_globals():
-    return {
-        'now': datetime.now(),
-        'guatemala_time': get_guatemala_time(),
-        'exam_deadline': EXAM_DEADLINE,
-        'is_exam_blocked': is_exam_blocked()
-    }
-
-
-def flatten_filter(nested_list):
-    """Filtro personalizado para aplanar listas anidadas en Jinja2"""
-    def flatten_recursive(items):
-        result = []
-        for item in items:
-            if isinstance(item, (list, tuple)):
-                result.extend(flatten_recursive(item))
-            else:
-                result.append(item)
-        return result
+    cur.execute("""
+        SELECT qe.*, r.student_id 
+        FROM question_evaluations qe
+        JOIN results r ON qe.result_id = r.id
+        WHERE qe.result_id = ?
+        ORDER BY qe.case_id, qe.question_index
+    """, (result_id,))
     
-    try:
-        if nested_list is None:
-            return []
-        return flatten_recursive(nested_list)
-    except:
-        return []
+    evaluations = []
+    for row in cur.fetchall():
+        evaluations.append({
+            'case_id': row['case_id'],
+            'question_index': row['question_index'],
+            'criterios': {
+                'opinion_fundada': row['opinion_fundada'],
+                'valores_eticos': row['valores_eticos'],
+                'lenguaje_terminologia': row['lenguaje_terminologia'],
+                'citas_precision': row['citas_precision'],
+                'estructura_coherencia': row['estructura_coherencia'],
+                'profundidad_fundamentacion': row['profundidad_fundamentacion'],
+                'capacidad_critica': row['capacidad_critica'],
+                'presentacion_estilo': row['presentacion_estilo'],
+                'innovacion_creatividad': row['innovacion_creatividad']
+            },
+            'feedback': {
+                'general': row['feedback_general'],
+                'fortalezas': row['feedback_fortalezas'],
+                'mejoras': row['feedback_mejoras']
+            },
+            'scores': {
+                'truth': row['truth_score'],
+                'argument': row['argument_score'],
+                'final': row['final_score']
+            },
+            'metadata': {
+                'tokens_used': row['ai_tokens_used'],
+                'processing_time': row['ai_processing_time_ms'],
+                'model_used': row['ai_model_used']
+            }
+        })
+    
+    return jsonify({'evaluations': evaluations})
 
-def from_json_filter(json_string):
-    """Filtro para convertir JSON string a dict en templates"""
-    try:
-        return json.loads(json_string) if json_string else {}
-    except:
-        return {}
-
-app.jinja_env.filters['from_json'] = from_json_filter
-app.jinja_env.filters['flatten'] = flatten_filter  
+# Ruta para estudiantes acceder a sus resultados
+@app.route('/mis-resultados/<token>')
+def student_results(token: str):
+    """Mostrar resultados al estudiante usando su token de acceso."""
+    db = get_db()
+    cur = db.cursor()
+    
+    # Verificar token válido
+    cur.execute("""
+        SELECT r.*, sat.access_count 
+        FROM student_access_tokens sat
+        JOIN results r ON sat.result_id = r.id
+        WHERE sat.token = ?
+    """, (token,))
+    
+    result = cur.fetchone()
+    if not result:
+        return render_template('error.html', message="Token inválido o expirado"), 404
+    
+    # Actualizar contador de acceso
+    cur.execute("""
+        UPDATE student_access_tokens 
+        SET access_count = access_count + 1, last_accessed = CURRENT_TIMESTAMP
+        WHERE token = ?
+    """, (token,))
+    db.commit()
+    
+    # Obtener evaluaciones detalladas
+    cur.execute("""
+        SELECT * FROM question_evaluations 
+        WHERE result_id = ?
+        ORDER BY case_id, question_index
+    """, (result['id'],))
+    
+    detailed_evaluations = cur.fetchall()
+    
+    # Reconstruir datos para el template
+    answers_data = json.loads(result['answers_json'])
+    all_cases_data = []
+    
+    for case_id_str, case_info in answers_data.get('all_cases', {}).items():
+        case_id = int(case_id_str)
+        if case_id in CASES:
+            case = CASES[case_id]
+            all_cases_data.append({
+                'case': case,
+                'answers': case_info['answers'],
+                'score': case_info['score']
+            })
+    
+    return render_template('comprehensive_feedback.html',
+                         all_cases_data=all_cases_data,
+                         cases=CASES,
+                         total_score=result['score'],
+                         student_name=answers_data.get('student_name', 'N/A'),
+                         student_carne=answers_data.get('student_carne', 'N/A'),
+                         duration_minutes=result['duration_seconds'] // 60 if result['duration_seconds'] else 0,
+                         general_feedback=result['general_feedback'],
+                         overall_level=result['overall_level'],
+                         detailed_evaluations=detailed_evaluations,
+                         result_id=result['id'],
+                         access_token=token,
+                         max_score=30.0)
 
 ###############################################################################
-# App startup
+# Application Entry Point
 ###############################################################################
 
 if __name__ == '__main__':
-    print("Iniciando aplicación NFTs y Propiedad Intelectual...")
-    print("LegalTechGT")
-    print(f"Password de instructor: {INSTRUCTOR_PASSWORD}")
-    print(f"Fecha límite del examen: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Guatemala)")
-    print(f"Estado del examen: {'BLOQUEADO' if is_exam_blocked() else 'ACTIVO'}")
     app.run(host='0.0.0.0', port=8000, debug=True)
