@@ -63,6 +63,10 @@ print(f"Fecha límite del examen: {EXAM_DEADLINE.strftime('%d/%m/%Y %H:%M')} (Gu
 guatemala_now = datetime.now(GUATEMALA_TZ)
 print(f"Estado del examen: {'BLOQUEADO' if guatemala_now > EXAM_DEADLINE else 'ACTIVO'}")
 
+@app.context_processor
+def inject_now():
+    return dict(now=datetime.now())
+
 ###############################################################################
 # Data Models
 ###############################################################################
