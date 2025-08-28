@@ -1,212 +1,334 @@
-{% extends "base.html" %}
-
-{% block title %}Resultados de Evaluación - NFT y Propiedad Intelectual{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <!-- Header con información del estudiante -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-graduation-cap me-2"></i>
-                        Evaluación Completada - NFTs y Propiedad Intelectual
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Estudiante:</strong> {{ student_name }}</p>
-                            <p><strong>Carné:</strong> {{ student_carne }}</p>
-                            <p><strong>Duración:</strong> {{ duration_minutes }} minutos</p>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <div class="display-4 text-primary">
-                                <strong>{{ "%.1f"|format(total_score) }}/30.0</strong>
-                            </div>
-                            <p class="text-muted">Puntuación Final</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Resumen de Evaluación con IA -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-robot me-2"></i>
-                        Análisis Inteligente con IA
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <!-- Mostrar general_feedback aquí -->
-                    <div class="alert alert-info">
-                        {{ general_feedback|safe if general_feedback else "Evaluación completada sin análisis de IA específico." }}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Evaluación Detallada por Casos -->
-    {% for case_data in all_cases_data %}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-gavel me-2"></i>
-                Caso {{ case_data.case.case_id }}: {{ case_data.case.title }}
-            </h5>
-            <small class="text-muted">{{ case_data.score|round(1) }}/6.0 puntos</small>
-        </div>
-        <div class="card-body">
-            <p class="text-muted">{{ case_data.case.description[:200] }}...</p>
-            
-            <!-- Preguntas del caso -->
-            {% for i in range(case_data.answers|length) %}
-            <div class="question-evaluation mb-4 p-3 border rounded">
-                <h6 class="text-primary">Pregunta {{ i + 1 }}</h6>
-                <p class="question-text">{{ case_data.case.questions[i].text }}</p>
-                
-                <!-- Respuesta del estudiante -->
-                <div class="student-answer mb-3">
-                    <h6 class="text-secondary">Su respuesta:</h6>
-                    <p><strong>{{ "Verdadero" if case_data.answers[i].user_bool else "Falso" }}</strong></p>
-                    <blockquote class="blockquote">
-                        <p>"{{ case_data.answers[i].user_reason }}"</p>
-                    </blockquote>
-                </div>
-                
-                <!-- Rúbrica Visual con JavaScript -->
-                <div class="rubrica-visual" id="rubrica-caso-{{ case_data.case.case_id }}-pregunta-{{ i }}">
-                    <h6 class="text-success">Evaluación por Criterios</h6>
-                    <div class="row">
-                        <!-- Los 9 criterios se mostrarán aquí con barras de progreso -->
-                        <div class="col-md-6">
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Opinión Fundada</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-info" style="width: 60%">3/5</div>
-                                </div>
-                            </div>
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Valores Éticos</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" style="width: 80%">4/5</div>
-                                </div>
-                            </div>
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Lenguaje Jurídico</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-warning" style="width: 40%">2/5</div>
-                                </div>
-                            </div>
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Citas y Precisión</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-info" style="width: 60%">3/5</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Estructura</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" style="width: 80%">4/5</div>
-                                </div>
-                            </div>
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Profundidad</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-info" style="width: 60%">3/5</div>
-                                </div>
-                            </div>
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Capacidad Crítica</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-warning" style="width: 50%">2.5/5</div>
-                                </div>
-                            </div>
-                            <div class="criterio-item mb-2">
-                                <label class="form-label small">Presentación</label>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" style="width: 90%">4.5/5</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Feedback de IA -->
-                <div class="ai-feedback mt-3">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card border-success">
-                                <div class="card-header bg-light text-success">
-                                    <small><strong><i class="fas fa-thumbs-up me-1"></i>Fortalezas</strong></small>
-                                </div>
-                                <div class="card-body p-2">
-                                    <small class="fortalezas-text">
-                                        <!-- Aquí irá el feedback_fortalezas de la BD -->
-                                        Cargando feedback de fortalezas...
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-warning">
-                                <div class="card-header bg-light text-warning">
-                                    <small><strong><i class="fas fa-lightbulb me-1"></i>Mejoras</strong></small>
-                                </div>
-                                <div class="card-body p-2">
-                                    <small class="mejoras-text">
-                                        <!-- Aquí irá el feedback_mejoras de la BD -->
-                                        Cargando sugerencias de mejora...
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endfor %}
-
-    <!-- Acciones -->
-    <div class="text-center mt-4">
-        <a href="/" class="btn btn-primary">
-            <i class="fas fa-home me-2"></i>Volver al Inicio
-        </a>
-        <button class="btn btn-info" onclick="window.print()">
-            <i class="fas fa-print me-2"></i>Imprimir Resultados
-        </button>
-    </div>
-</div>
-
-<!-- Script para cargar datos reales de la BD -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Aquí cargaremos los datos reales de evaluación desde la BD
-    // Por ahora mostramos placeholder, luego haremos la llamada AJAX
-    console.log('Cargando evaluaciones detalladas...');
+<!DOCTYPE html>
+<html lang="es" class="visual-theme-5 typography-modern">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Evaluación NFTs y PI - ACADEMIA{% endblock %}</title>
     
-    // TODO: Hacer fetch a endpoint que devuelva las evaluaciones detalladas
-    // fetch('/api/evaluation-details/' + result_id)
-    //   .then(response => response.json())
-    //   .then(data => {
-    //       updateRubricaVisual(data);
-    //   });
-});
+    <meta name="description" content="Sistema de evaluación integral sobre NFTs y Propiedad Intelectual ACADEMIA LEGALTECH">
+    <meta name="keywords" content="NFT, tokens no fungibles, propiedad intelectual, smart contracts, Guatemala, derecho">
+    <meta name="author" content="LegalTech - David Salazar">
+    
+    <!-- Framework CSS -->
+    <link rel="stylesheet" href="https://legaltech.com.gt/themeoj/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lexend+Deca:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="https://legaltech.com.gt/fav/favicon-96x96.png" type="image/png">
+    
+    <!-- Theme Override - Mantiene tu identidad visual -->
+    <style>
+        :root {
+            --theme-5-primary: #3498db;      /* Azul brillante tecnológico */
+            --theme-5-secondary: #2c3e50;    /* Azul marino institucional */
+            --theme-5-accent: #3498db;
+            --success-500: #27ae60;          /* Verde para éxito */
+            --danger-500: #e74c3c;           /* Rojo para alertas */
+            --warning-500: #f39c12;          /* Naranja para advertencias */
+            --info-500: #17a2b8;             /* Azul info */
+        }
+        
+        body { 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        /* === CORRECCIÓN CRÍTICA: ESTILOS PARA BOTONES DE RADIO === */
+        /* Estilo para los botones de radio seleccionados */
+        input[type="radio"]:checked + label.btn-outline {
+            background-color: var(--theme-5-primary) !important;
+            color: white !important;
+            border-color: var(--theme-5-primary) !important;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4) !important;
+            transform: translateY(-2px);
+        }
 
-function updateRubricaVisual(evaluations) {
-    // Función para actualizar las barras de progreso con datos reales
-    console.log('Actualizando visualización de rúbrica:', evaluations);
-}
-</script>
-{% endblock %}
+        /* Suavizar la transición al seleccionar */
+        label.btn-outline {
+            transition: all 0.3s ease-in-out !important;
+        }
+
+        /* Hover effect para botones no seleccionados */
+        label.btn-outline:hover {
+            background-color: rgba(52, 152, 219, 0.1) !important;
+            border-color: var(--theme-5-primary) !important;
+            transform: translateY(-1px);
+        }
+        
+        /* === ESTILOS ESPECÍFICOS PARA NFT EXAM === */
+        .character-counter {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        
+        .char-counter {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            text-align: right;
+            font-weight: 500;
+        }
+        
+        .char-counter.valid {
+            color: #28a745;
+        }
+        
+        .char-counter.invalid {
+            color: #dc3545;
+        }
+        
+        .char-counter.warning {
+            color: #ffc107;
+        }
+        
+        .term-chips .badge {
+            margin: 0.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .term-chips .badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        /* Círculos de progreso personalizados */
+        .progress-ring {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--theme-5-primary);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        /* Exam blocked styles */
+        .exam-blocked {
+            background: rgba(231, 76, 60, 0.1);
+            border: 2px solid #e74c3c;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            color: #721c24;
+        }
+        
+        .exam-timer {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #f39c12;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        /* Anti-cheat styles */
+        .single-attempt-warning {
+            background: rgba(220, 53, 69, 0.1);
+            border: 2px solid #dc3545;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            color: #721c24;
+        }
+
+        /* === MEJORAS ADICIONALES DE UI === */
+        /* Mejorar la visibilidad de elementos del formulario */
+        .form-control:focus {
+            border-color: var(--theme-5-primary);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        /* Estilo mejorado para tarjetas del examen */
+        .card-animated-border {
+            transition: all 0.3s ease;
+        }
+
+        .card-animated-border:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Botón de envío mejorado */
+        .btn-xl {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .d-flex.gap-3 {
+                flex-direction: column;
+                gap: 0.5rem !important;
+            }
+            
+            label.btn-outline {
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+    
+    {% block head %}{% endblock %}
+</head>
+<body 
+    class="no-sidebar-layout"
+    data-visual-theme="5"
+    data-typography-style="modern"
+>
+    <!-- Header Institucional -->
+    <header class="site-header">
+        <div class="container header-content">
+            <a href="{{ url_for('index') }}" class="site-logo">
+                <img id="headerLogo" src="https://legaltech.com.gt/fav/favicon-96x96.png" alt="ACADEMIA Logo" class="logo-img">
+                <div class="logo-text-container">
+                    <span class="logo-text-main">ACADEMIA</span>
+                    <span class="logo-text-subtitle">Innovación y justicia en la nueva economía digital</span>
+                </div>
+            </a>
+            <div class="header-right">
+                {% if session.get('instructor') %}
+                    <span class="badge badge-success me-2">
+                        <i class="fas fa-user-shield me-1"></i>Instructor
+                    </span>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm me-2">
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-sign-out-alt me-1"></i>Cerrar Sesión
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline btn-sm">
+                        <i class="fas fa-sign-in-alt me-1"></i>Instructor
+                    </a>
+                {% endif %}
+                <button id="themeToggle" class="header-btn theme-toggle-btn ms-2">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container py-4">
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert-container mb-4">
+                        {% for message in messages %}
+                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page Title -->
+            {% if self.page_title() %}
+                <div class="page-title-section mb-4" data-animate="fade-down">
+                    <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+                </div>
+            {% endif %}
+            
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer mt-auto">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="footer-info">
+                        <p class="mb-0">
+                            <strong>Sistema de Evaluación NFTs y Propiedad Intelectual</strong><br>
+                            <small class="text-muted">Academia LegalTech</small>
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="footer-links">
+                        <a href="{{ url_for('info') }}" class="footer-link">
+                            <i class="fas fa-info-circle me-1"></i>Rúbrica
+                        </a>
+                        <span class="separator">|</span>
+                        <a href="https://repositorio.uchile.cl/bitstream/handle/2250/199772/NFTs-un-estudio-sobre-el-alcance-de-la-propiedad-intelectual-en-los-tokens-no-fungibles.pdf" 
+                           target="_blank" class="footer-link">
+                            <i class="fas fa-book me-1"></i>Documento Base
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="copyright mb-0">
+                        <small class="text-muted">
+                            &copy; {{ now.strftime('%Y') }} ACADEMIA. 
+                            Powered by LegalTech GT.
+                            {% if is_exam_blocked %}
+                                <span class="badge badge-danger ms-2">EXAMEN CERRADO</span>
+                            {% else %}
+                                <span class="badge badge-success ms-2">EXAMEN ACTIVO</span>
+                            {% endif %}
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Framework JavaScript -->
+    <script src="https://legaltech.com.gt/themeoj/script.js"></script>
+    
+    <!-- Scripts específicos de la página -->
+    {% block scripts %}{% endblock %}
+    
+    <!-- Inicialización global -->
+    <script>
+        // Inicializar componentes del framework
+        document.addEventListener('DOMContentLoaded', () => {
+            // Detectar si estamos en modo desarrollo
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            if (isDev) {
+                console.log('🎓 Academia NFT & PI Sistema Activo');
+                console.log('📊 Framework: PROFINS XXIV');
+                console.log('⚖️ Contexto: LegalTech');
+            }
+            
+            // Animaciones de entrada
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('[data-animate]').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.6s ease-out';
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>
