@@ -31,7 +31,8 @@ INSTRUCTOR_PASSWORD = "organismojudicial"
 
 # File path to the SQLite database
 BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / "exam.db"
+
+DB_PATH = BASE_DIR / "data" / "exam.db"
 
 # Exam deadline (Guatemala timezone GMT-6)
 GUATEMALA_TZ = timezone(timedelta(hours=-6))
