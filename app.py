@@ -734,7 +734,7 @@ Responde SOLO en formato JSON válido:
 ###############################################################################
 
 @app.route('/')
-def student_form() -> str:
+def index() -> str:
     """Present the form for students to register for the exam."""
     if is_exam_blocked():
         return render_template('exam_blocked.html', deadline=EXAM_DEADLINE, 
@@ -755,13 +755,13 @@ def start_exam() -> str:
     
     if not student_name or not student_carne:
         flash('Por favor complete todos los campos requeridos.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     # Check for duplicate attempts
     student_hash = get_student_hash(student_name, student_carne)
     if has_student_attempted(student_hash):
         flash('Ya ha completado el examen anteriormente. Solo se permite un intento por estudiante.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     # Store student data in session
     session['student_name'] = student_name
@@ -780,12 +780,12 @@ def comprehensive_exam() -> str:
     
     if 'student_name' not in session:
         flash('Debe registrarse primero antes de tomar el examen.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     # Check for duplicate attempts again (in case of session manipulation)
     if has_student_attempted(session.get('student_hash', '')):
         flash('Ya ha completado el examen anteriormente.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     return render_template('comprehensive_exam.html', 
                          cases=CASES, 
@@ -801,7 +801,7 @@ def submit_comprehensive() -> str:
     
     if 'student_name' not in session:
         flash('Sesión expirada. Debe registrarse nuevamente.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     student_name = session.get('student_name')
     student_carne = session.get('student_carne')
@@ -810,12 +810,12 @@ def submit_comprehensive() -> str:
     
     if not all([student_name, student_carne, student_hash, start_time_iso]):
         flash('Datos de sesión incompletos. Reinicie el examen.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     # Check for duplicate submission
     if has_student_attempted(student_hash):
         flash('Ya ha completado el examen anteriormente.', 'error')
-        return redirect(url_for('student_form'))
+        return redirect(url_for('index'))
     
     # Calculate timing
     start_time = datetime.fromisoformat(start_time_iso)
@@ -1127,6 +1127,12 @@ def view_result(result_id: int) -> str:
                                  detailed_evaluations=detailed_evaluations)
         else:
             # Single case exam (legacy)
+            cur.execute(
+                "SELECT event_type, event_time, details FROM events WHERE result_id = ?",
+                (result_id,)
+            )
+            events = cur.fetchall()
+            
             return render_template('result.html', 
                                  result=result, 
                                  case=CASES.get(result['case_id']),
